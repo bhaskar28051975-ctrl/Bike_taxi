@@ -3,50 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bike Taxi Fare Calculator</title>
-    <!-- Tailwind CSS for styling -->
+    <title>Bike Taxi App - Destination Search</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Leaflet CSS for Map -->
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        #map { height: 350px; width: 100%; }
+        #map { height: 300px; width: 100%; }
     </style>
 </head>
 <body class="bg-slate-100 font-sans">
 
-    <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg flex flex-col justify-between">
-        <!-- Header -->
-        <div class="bg-amber-400 p-4 text-slate-900 font-bold text-lg text-center shadow-md">
-            Bike Taxi Booking & Pricing
-        </div>
-
-        <!-- Map Container -->
-        <div class="relative">
-            <div id="map"></div>
-            <button onclick="getCurrentLocation()" class="absolute bottom-3 right-3 bg-white px-3 py-1.5 rounded-full shadow-md text-xs font-semibold text-slate-700 z-[1000] border">
-                📍 My Location
-            </button>
-        </div>
-
-        <!-- Booking Details Panel -->
-        <div class="p-4 flex-1 flex flex-col justify-between space-y-4">
-            <div class="space-y-3">
-                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                    <p class="text-xs text-slate-500 font-medium">PICKUP</p>
-                    <p id="pickup-text" class="text-sm font-semibold text-slate-800">Fetching current location...</p>
+    <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg flex flex-col justify-between relative">
+        
+        <!-- Top Section: Search Bar & Map -->
+        <div>
+            <!-- Search Header Container -->
+            <div class="p-4 bg-white shadow-sm z-50 relative space-y-3">
+                <div class="flex items-center bg-slate-100 rounded-full px-4 py-2.5 border border-slate-200 shadow-inner">
+                    <span class="text-slate-400 mr-2">🔍</span>
+                    <input type="text" id="search-input" placeholder="Where do you want to go?" 
+                           oninput="searchLocation(this.value)"
+                           class="bg-transparent w-full focus:outline-none text-slate-800 text-sm font-medium">
                 </div>
 
-                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                    <p class="text-xs text-slate-500 font-medium">DESTINATION</p>
-                    <p class="text-xs text-amber-600 font-medium">Tap anywhere on the map to set drop location</p>
-                    <p id="drop-text" class="text-sm font-semibold text-slate-800">Not selected yet</p>
+                <!-- Autocomplete Suggestions Dropdown -->
+                <div id="suggestions-list" class="absolute left-4 right-4 bg-white rounded-xl shadow-xl border border-slate-100 hidden max-h-48 overflow-y-auto z-50"></div>
+            </div>
+
+            <!-- Map Container -->
+            <div class="relative">
+                <div id="map"></div>
+                <button onclick="getCurrentLocation()" class="absolute bottom-3 right-3 bg-white px-3 py-1.5 rounded-full shadow-md text-xs font-semibold text-slate-700 z-[400] border">
+                    📍 My Location
+                </button>
+            </div>
+        </div>
+
+        <!-- Bottom Details Panel -->
+        <div class="p-4 flex-1 flex flex-col justify-between space-y-4">
+            <div class="space-y-2">
+                <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200 flex justify-between items-center">
+                    <div>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">Pickup</p>
+                        <p id="pickup-text" class="text-xs font-semibold text-slate-800">Fetching current location...</p>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200 flex justify-between items-center">
+                    <div>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">Drop-off</p>
+                        <p id="drop-text" class="text-xs font-semibold text-slate-800">Search or tap map above</p>
+                    </div>
                 </div>
             </div>
 
             <!-- Price Breakdown Card -->
             <div id="fare-card" class="hidden border-2 border-amber-400 bg-amber-50/50 p-4 rounded-xl space-y-2">
                 <div class="flex justify-between items-center">
-                    <span class="font-bold text-slate-800">Bike Ride (Fastest)</span>
+                    <span class="font-bold text-slate-800 text-sm">🏍️ Bike Ride (FASTEST)</span>
                     <span id="price-display" class="text-2xl font-black text-slate-900">₹0</span>
                 </div>
                 <div class="flex justify-between text-xs text-slate-600 border-t border-amber-200 pt-2">
@@ -56,8 +71,8 @@
             </div>
 
             <!-- Action Button -->
-            <button onclick="bookRide()" id="book-btn" disabled class="w-full bg-slate-300 text-slate-500 font-bold py-3.5 rounded-xl transition-all shadow-sm cursor-not-allowed">
-                Select Destination on Map
+            <button onclick="bookRide()" id="book-btn" disabled class="w-full bg-slate-300 text-slate-500 font-bold py-3.5 rounded-xl transition-all shadow-sm cursor-not-allowed text-sm">
+                Enter Destination
             </button>
         </div>
     </div>
@@ -70,56 +85,46 @@
         let dropCoords = null;
         let calculatedDistanceKm = 0;
         let calculatedFare = 0;
+        let searchTimeout = null;
 
-        // Initialize Map
         function initMap() {
-            // Default center (Mumbai fallback)
             map = L.map('map').setView([18.922, 72.834], 13);
-
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '© OpenStreetMap'
             }).addTo(map);
 
-            // Listen for destination clicks on the map
             map.on('click', function(e) {
                 dropCoords = [e.latlng.lat, e.latlng.lng];
-                setDropPin(dropCoords);
-                if (pickupCoords) {
-                    calculateRouteAndPrice();
-                }
+                setDropPin(dropCoords, "Dropped Pin Location");
+                if (pickupCoords) calculateRouteAndPrice();
             });
 
             getCurrentLocation();
         }
 
-        // Get User's Real-time GPS Location
         function getCurrentLocation() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
                         pickupCoords = [position.coords.latitude, position.coords.longitude];
                         setPickupPin(pickupCoords);
-                        document.getElementById('pickup-text').innerText = `Lat: ${pickupCoords[0].toFixed(4)}, Lng: ${pickupCoords[1].toFixed(4)}`;
+                        document.getElementById('pickup-text').innerText = `Current GPS Location`;
                         map.setView(pickupCoords, 14);
                         if (dropCoords) calculateRouteAndPrice();
                     },
-                    (error) => {
-                        alert("Error getting location. Please enable GPS permissions.");
-                    },
+                    (error) => { alert("Please enable location permissions."); },
                     { enableHighAccuracy: true }
                 );
-            } else {
-                alert("Geolocation is not supported by your browser.");
             }
         }
 
         function setPickupPin(coords) {
             if (pickupMarker) map.removeLayer(pickupMarker);
-            pickupMarker = L.marker(coords).addTo(map).bindPopup("Pickup Location").openPopup();
+            pickupMarker = L.marker(coords).addTo(map).bindPopup("Pickup");
         }
 
-        function setDropPin(coords) {
+        function setDropPin(coords, name) {
             if (dropMarker) map.removeLayer(dropMarker);
             dropMarker = L.marker(coords, {
                 icon: L.icon({
@@ -127,14 +132,54 @@
                     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
                     iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
                 })
-            }).addTo(map).bindPopup("Drop Location").openPopup();
-            document.getElementById('drop-text').innerText = `Lat: ${coords[0].toFixed(4)}, Lng: ${coords[1].toFixed(4)}`;
+            }).addTo(map).bindPopup(name).openPopup();
+            
+            document.getElementById('drop-text').innerText = name;
+            map.setView(coords, 14);
         }
 
-        // Calculate Route & Distance using Free OSRM Public API
+        // Search Autocomplete using Free Nominatim API
+        function searchLocation(query) {
+            clearTimeout(searchTimeout);
+            let listDiv = document.getElementById('suggestions-list');
+            
+            if (query.length < 3) {
+                listDiv.classList.add('hidden');
+                return;
+            }
+
+            searchTimeout = setTimeout(async () => {
+                let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=in&limit=5`;
+                try {
+                    let response = await fetch(url);
+                    let data = await response.json();
+                    
+                    listDiv.innerHTML = '';
+                    if (data.length > 0) {
+                        data.forEach(item => {
+                            let div = document.createElement('div');
+                            div.className = "p-3 hover:bg-slate-50 border-b border-slate-100 text-xs text-slate-700 cursor-pointer truncate font-medium";
+                            div.innerText = item.display_name;
+                            div.onclick = () => {
+                                dropCoords = [parseFloat(item.lat), parseFloat(item.lon)];
+                                document.getElementById('search-input').value = item.display_name;
+                                listDiv.classList.add('hidden');
+                                setDropPin(dropCoords, item.display_name);
+                                if (pickupCoords) calculateRouteAndPrice();
+                            };
+                            listDiv.appendChild(div);
+                        });
+                        listDiv.classList.remove('hidden');
+                    } else {
+                        listDiv.classList.add('hidden');
+                    }
+                } catch (e) { console.error(e); }
+            }, 300);
+        }
+
+        // Calculate Route using OSRM
         async function calculateRouteAndPrice() {
             if (!pickupCoords || !dropCoords) return;
-
             const url = `https://router.project-osrm.org/route/v1/driving/${pickupCoords[1]},${pickupCoords[0]};${dropCoords[1]},${dropCoords[0]}?overview=full&geometries=geojson`;
 
             try {
@@ -143,19 +188,16 @@
 
                 if (data.routes && data.routes.length > 0) {
                     let route = data.routes[0];
-                    calculatedDistanceKm = route.distance / 1000; // convert meters to km
+                    calculatedDistanceKm = route.distance / 1000;
                     let durationMins = Math.round(route.duration / 60);
 
-                    // Draw route polyline on map
                     if (routeLine) map.removeLayer(routeLine);
                     routeLine = L.geoJSON(route.geometry, {
                         style: { color: '#f59e0b', weight: 5, opacity: 0.8 }
                     }).addTo(map);
 
-                    // Compute Custom Kilometer-Wise Price
                     calculatedFare = calculateCustomFare(calculatedDistanceKm);
 
-                    // Update UI Display
                     document.getElementById('distance-display').innerText = `Distance: ${calculatedDistanceKm.toFixed(1)} km`;
                     document.getElementById('eta-display').innerText = `ETA: ${durationMins} mins`;
                     document.getElementById('price-display').innerText = `₹${calculatedFare}`;
@@ -163,20 +205,17 @@
 
                     let bookBtn = document.getElementById('book-btn');
                     bookBtn.disabled = false;
-                    bookBtn.className = "w-full bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold py-3.5 rounded-xl transition-all shadow-md cursor-pointer";
+                    bookBtn.className = "w-full bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold py-3.5 rounded-xl transition-all shadow-md cursor-pointer text-sm";
                     bookBtn.innerText = `Book Bike - ₹${calculatedFare}`;
                 }
-            } catch (err) {
-                console.error("Routing error: ", err);
-            }
+            } catch (err) { console.error(err); }
         }
 
-        // Custom Kilometer-Wise Pricing Formula
         function calculateCustomFare(km) {
-            const baseFare = 20;      // Base price for first 2 km
+            const baseFare = 20;
             const baseKm = 2;
-            const perKmRate = 12;     // ₹12 per extra km
-            const minPrice = 25;      // Absolute minimum floor
+            const perKmRate = 12;
+            const minPrice = 25;
 
             let total = baseFare;
             if (km > baseKm) {
@@ -185,10 +224,8 @@
             return Math.max(minPrice, Math.round(total));
         }
 
-        // Optional: Save Booking to Firebase Realtime Database (Free Tier)
         function bookRide() {
-            alert(`Ride booked successfully! Total Fare: ₹${calculatedFare} for ${calculatedDistanceKm.toFixed(1)} km.`);
-            // You can push data to Firebase Realtime Database here if needed
+            alert(`Booking confirmed! Fare: ₹${calculatedFare} for ${calculatedDistanceKm.toFixed(1)} km.`);
         }
 
         window.onload = initMap;

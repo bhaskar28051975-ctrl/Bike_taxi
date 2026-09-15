@@ -18,26 +18,26 @@
         <!-- Header & Settings Toggle -->
         <div class="bg-slate-900 text-white p-4 flex justify-between items-center z-50 shadow-md">
             <h1 class="font-bold text-base flex items-center gap-2">🏍️ RapidRide Bike Taxi</h1>
-            <button onclick="toggleSettings()" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg border border-slate-700 font-medium">
+            <button onclick="toggleSettings()" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg border border-slate-700 font-medium cursor-pointer">
                 ⚙️ Pricing Settings
             </button>
         </div>
 
-        <!-- Hidden Pricing & Shift Control Drawer -->
-        <div id="settings-drawer" class="hidden bg-slate-800 text-white p-4 space-y-3 border-b border-slate-700 text-xs z-50">
+        <!-- Pricing & Shift Control Drawer (Visible via Toggle) -->
+        <div id="settings-drawer" class="hidden bg-slate-800 text-white p-4 space-y-3 border-b border-slate-700 text-xs z-50 transition-all">
             <h2 class="font-bold text-amber-400 text-sm">🎛️ Fare & Shift Controls</h2>
             <div class="grid grid-cols-2 gap-2">
                 <div>
                     <label class="text-slate-400">Per KM Rate (₹):</label>
-                    <input type="number" id="setting-per-km" value="12" onchange="updatePricingConfig()" class="w-full bg-slate-900 border border-slate-700 p-1.5 rounded text-white mt-1">
+                    <input type="number" id="setting-per-km" value="12" oninput="updatePricingConfig()" class="w-full bg-slate-900 border border-slate-700 p-1.5 rounded text-white mt-1">
                 </div>
                 <div>
                     <label class="text-slate-400">Base Fare (₹):</label>
-                    <input type="number" id="setting-base" value="20" onchange="updatePricingConfig()" class="w-full bg-slate-900 border border-slate-700 p-1.5 rounded text-white mt-1">
+                    <input type="number" id="setting-base" value="20" oninput="updatePricingConfig()" class="w-full bg-slate-900 border border-slate-700 p-1.5 rounded text-white mt-1">
                 </div>
             </div>
             <div class="flex items-center justify-between pt-1">
-                <span class="text-slate-300">🌙 Night Shift Active (+25% Surcharge):</span>
+                <span class="text-slate-300">🌙 Night Shift Active (+25%):</span>
                 <input type="checkbox" id="setting-night" onchange="updatePricingConfig()" class="w-4 h-4 accent-amber-400 cursor-pointer">
             </div>
         </div>
@@ -131,9 +131,14 @@
             getCurrentLocation();
         }
 
+        // Fixed Toggle Function for Settings Menu
         function toggleSettings() {
             let drawer = document.getElementById('settings-drawer');
-            drawer.classList.toggle('hidden');
+            if (drawer.classList.contains('hidden')) {
+                drawer.classList.remove('hidden');
+            } else {
+                drawer.classList.add('hidden');
+            }
         }
 
         function getCurrentLocation() {
@@ -142,7 +147,7 @@
                     (position) => {
                         pickupCoords = [position.coords.latitude, position.coords.longitude];
                         setPickupPin(pickupCoords);
-                        document.getElementById('pickup-textⵕ' || 'pickup-text').innerText = `Current GPS`;
+                        document.getElementById('pickup-text').innerText = `Current GPS`;
                         map.setView(pickupCoords, 14);
                         if (dropCoords) calculateRouteAndPrice();
                     },
@@ -246,7 +251,7 @@
             total = Math.max(minPrice, total);
 
             if (isNight) {
-                total *= 1.25; // 25% night shift surcharge
+                total *= 1.25; // 25% surcharge
                 document.getElementById('night-badge').classList.remove('hidden');
             } else {
                 document.getElementById('night-badge').classList.add('hidden');
@@ -254,7 +259,6 @@
 
             calculatedFare = Math.round(total);
 
-            // Competitor estimation baselines for comparison
             let cabEstimate = Math.round(calculatedFare * 2.4);
             let autoEstimate = Math.round(calculatedFare * 1.6);
 
@@ -276,8 +280,6 @@
             let dropText = document.getElementById('drop-text').innerText;
             let nightActive = document.getElementById('setting-night').checked ? " (Night Shift)" : "";
             let message = `New Bike Ride Booking!%0a*Fare:* ₹${calculatedFare}${nightActive}%0a*Distance:* ${calculatedDistanceKm.toFixed(1)} km%0a*Drop:* ${dropText}`;
-            
-            // Open direct driver WhatsApp dispatch channel inside the same frame window
             window.location.href = `https://wa.me/?text=${message}`;
         }
 

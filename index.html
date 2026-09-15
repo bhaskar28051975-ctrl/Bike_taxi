@@ -9,24 +9,49 @@
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        #map { height: 320px; width: 100%; z-index: 10; }
+        #map { height: 260px; width: 100%; z-index: 10; }
     </style>
 </head>
 <body class="bg-slate-100 font-sans">
-
     <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg flex flex-col justify-between relative">
         
+        <!-- Header & Settings Toggle -->
+        <div class="bg-slate-900 text-white p-4 flex justify-between items-center z-50 shadow-md">
+            <h1 class="font-bold text-base flex items-center gap-2">🏍️ RapidRide Bike Taxi</h1>
+            <button onclick="toggleSettings()" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg border border-slate-700 font-medium">
+                ⚙️ Pricing Settings
+            </button>
+        </div>
+
+        <!-- Hidden Pricing & Shift Control Drawer -->
+        <div id="settings-drawer" class="hidden bg-slate-800 text-white p-4 space-y-3 border-b border-slate-700 text-xs z-50">
+            <h2 class="font-bold text-amber-400 text-sm">🎛️ Fare & Shift Controls</h2>
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="text-slate-400">Per KM Rate (₹):</label>
+                    <input type="number" id="setting-per-km" value="12" onchange="updatePricingConfig()" class="w-full bg-slate-900 border border-slate-700 p-1.5 rounded text-white mt-1">
+                </div>
+                <div>
+                    <label class="text-slate-400">Base Fare (₹):</label>
+                    <input type="number" id="setting-base" value="20" onchange="updatePricingConfig()" class="w-full bg-slate-900 border border-slate-700 p-1.5 rounded text-white mt-1">
+                </div>
+            </div>
+            <div class="flex items-center justify-between pt-1">
+                <span class="text-slate-300">🌙 Night Shift Active (+25% Surcharge):</span>
+                <input type="checkbox" id="setting-night" onchange="updatePricingConfig()" class="w-4 h-4 accent-amber-400 cursor-pointer">
+            </div>
+        </div>
+
         <!-- Top Search Section -->
-        <div class="p-4 bg-white shadow-sm relative z-50 space-y-3">
+        <div class="p-4 bg-white shadow-sm relative z-40 space-y-3">
             <div class="flex items-center bg-slate-100 rounded-xl px-4 py-3 border border-slate-200 shadow-inner">
                 <span class="text-slate-400 mr-2 text-lg">🔍</span>
                 <input type="text" id="search-input" placeholder="Where do you want to go?" 
                        oninput="searchLocation(this.value)"
                        class="bg-transparent w-full focus:outline-none text-slate-800 font-medium text-sm">
             </div>
-
-            <!-- Fixed Dropdown Container (Always on top) -->
-            <div id="suggestions-list" class="absolute top-20 left-4 right-4 bg-white rounded-xl shadow-2xl border border-slate-200 hidden max-h-72 overflow-y-auto z-[9999]"></div>
+            <!-- Fixed Dropdown Container -->
+            <div id="suggestions-list" class="absolute top-36 left-4 right-4 bg-white rounded-xl shadow-2xl border border-slate-200 hidden max-h-60 overflow-y-auto z-[9999]"></div>
         </div>
 
         <!-- Map Container -->
@@ -38,28 +63,39 @@
         </div>
 
         <!-- Bottom Details Panel -->
-        <div class="p-4 flex-1 flex flex-col justify-between space-y-4 bg-white">
-            <div class="space-y-2">
-                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+        <div class="p-4 flex-1 flex flex-col justify-between space-y-3 bg-white">
+            <div class="grid grid-cols-2 gap-2">
+                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
                     <p class="text-[10px] text-slate-400 font-bold uppercase">Pickup</p>
-                    <p id="pickup-text" class="text-xs font-semibold text-slate-800">Fetching current location...</p>
+                    <p id="pickup-text" class="text-xs font-semibold text-slate-800 truncate">Fetching GPS...</p>
                 </div>
-
-                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
                     <p class="text-[10px] text-slate-400 font-bold uppercase">Drop-off</p>
-                    <p id="drop-text" class="text-xs font-semibold text-slate-800">Search location above or tap map</p>
+                    <p id="drop-text" class="text-xs font-semibold text-slate-800 truncate">Tap map or search</p>
                 </div>
             </div>
 
-            <!-- Price Breakdown Card -->
-            <div id="fare-card" class="hidden border-2 border-amber-400 bg-amber-50/50 p-4 rounded-2xl space-y-2">
+            <!-- Price Breakdown & Competitor Comparison Card -->
+            <div id="fare-card" class="hidden border-2 border-amber-400 bg-amber-50/50 p-3.5 rounded-2xl space-y-2">
                 <div class="flex justify-between items-center">
-                    <span class="font-bold text-slate-800 text-sm">🏍️ Bike Ride (FASTEST)</span>
-                    <span id="price-display" class="text-2xl font-black text-slate-900">₹0</span>
+                    <div>
+                        <span class="font-bold text-slate-900 text-sm">🏍️ RapidRide Bike</span>
+                        <span id="night-badge" class="hidden ml-1 text-[10px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-full font-bold">Night Shift</span>
+                    </div>
+                    <span id="price-display" class="text-xl font-black text-slate-900">₹0</span>
                 </div>
-                <div class="flex justify-between text-xs text-slate-600 border-t border-amber-200 pt-2 font-medium">
+                <div class="flex justify-between text-xs text-slate-600 border-t border-amber-200 pt-1.5 font-medium">
                     <span id="distance-display">Distance: 0 km</span>
                     <span id="eta-display">ETA: 0 mins</span>
+                </div>
+
+                <!-- Competitor Comparison Row -->
+                <div class="bg-white/80 p-2 rounded-xl border border-amber-200 text-[11px] flex justify-between items-center text-slate-700">
+                    <span class="font-semibold text-slate-500">Market Estimates:</span>
+                    <div class="space-x-2">
+                        <span>Cab: <strong id="comp-cab" class="text-red-600">₹0</strong></span>
+                        <span>Auto: <strong id="comp-auto" class="text-amber-600">₹0</strong></span>
+                    </div>
                 </div>
             </div>
 
@@ -92,8 +128,12 @@
                 setDropPin(dropCoords, "Pinned Location on Map");
                 if (pickupCoords) calculateRouteAndPrice();
             });
-
             getCurrentLocation();
+        }
+
+        function toggleSettings() {
+            let drawer = document.getElementById('settings-drawer');
+            drawer.classList.toggle('hidden');
         }
 
         function getCurrentLocation() {
@@ -102,7 +142,7 @@
                     (position) => {
                         pickupCoords = [position.coords.latitude, position.coords.longitude];
                         setPickupPin(pickupCoords);
-                        document.getElementById('pickup-text').innerText = `Current GPS Location`;
+                        document.getElementById('pickup-textⵕ' || 'pickup-text').innerText = `Current GPS`;
                         map.setView(pickupCoords, 14);
                         if (dropCoords) calculateRouteAndPrice();
                     },
@@ -131,28 +171,24 @@
             map.setView(coords, 14);
         }
 
-        // Search Autocomplete with proper high z-index stacking
         function searchLocation(query) {
             clearTimeout(searchTimeout);
             let listDiv = document.getElementById('suggestions-list');
-            
             if (query.length < 3) {
                 listDiv.classList.add('hidden');
                 return;
             }
-
             searchTimeout = setTimeout(async () => {
                 let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=in&limit=5`;
                 try {
                     let response = await fetch(url);
                     let data = await response.json();
-                    
                     listDiv.innerHTML = '';
                     if (data.length > 0) {
                         data.forEach(item => {
                             let div = document.createElement('div');
-                            div.className = "p-3.5 hover:bg-amber-50 border-b border-slate-100 text-xs text-slate-700 cursor-pointer font-medium flex items-center space-x-2";
-                            div.innerHTML = `<span class="text-amber-500 text-sm">📍</span> <span class="truncate">${item.display_name}</span>`;
+                            div.className = "p-3 hover:bg-amber-50 border-b border-slate-100 text-xs text-slate-700 cursor-pointer font-medium flex items-center space-x-2";
+                            div.innerHTML = `<span class="text-amber-500">📍</span> <span class="truncate">${item.display_name}</span>`;
                             div.onclick = () => {
                                 dropCoords = [parseFloat(item.lat), parseFloat(item.lon)];
                                 document.getElementById('search-input').value = item.display_name;
@@ -170,15 +206,12 @@
             }, 300);
         }
 
-        // Calculate Route & Distance using OSRM
         async function calculateRouteAndPrice() {
             if (!pickupCoords || !dropCoords) return;
             const url = `https://router.project-osrm.org/route/v1/driving/${pickupCoords[1]},${pickupCoords[0]};${dropCoords[1]},${dropCoords[0]}?overview=full&geometries=geojson`;
-
             try {
                 let response = await fetch(url);
                 let data = await response.json();
-
                 if (data.routes && data.routes.length > 0) {
                     let route = data.routes[0];
                     calculatedDistanceKm = route.distance / 1000;
@@ -189,37 +222,63 @@
                         style: { color: '#f59e0b', weight: 5, opacity: 0.8 }
                     }).addTo(map);
 
-                    calculatedFare = calculateCustomFare(calculatedDistanceKm);
-
-                    document.getElementById('distance-display').innerText = `Distance: ${calculatedDistanceKm.toFixed(1)} km`;
-                    document.getElementById('eta-display').innerText = `ETA: ${durationMins} mins`;
-                    document.getElementById('price-display').innerText = `₹${calculatedFare}`;
-                    document.getElementById('fare-card').classList.remove('hidden');
-
-                    let bookBtn = document.getElementById('book-btn');
-                    bookBtn.disabled = false;
-                    bookBtn.className = "w-full bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold py-3.5 rounded-xl transition-all shadow-md cursor-pointer text-sm";
-                    bookBtn.innerText = `Book Bike - ₹${calculatedFare}`;
+                    updateFareDisplay(calculatedDistanceKm, durationMins);
                 }
             } catch (err) { console.error(err); }
         }
 
-        // Kilometer-Wise Pricing Formula
-        function calculateCustomFare(km) {
-            const baseFare = 20;
-            const baseKm = 2;
-            const perKmRate = 12;
+        function updatePricingConfig() {
+            if (calculatedDistanceKm > 0) {
+                updateFareDisplay(calculatedDistanceKm, 0);
+            }
+        }
+
+        function updateFareDisplay(km, durationMins) {
+            const baseFare = parseFloat(document.getElementById('setting-base').value) || 20;
+            const perKmRate = parseFloat(document.getElementById('setting-per-km').value) || 12;
+            const isNight = document.getElementById('setting-night').checked;
             const minPrice = 25;
 
             let total = baseFare;
-            if (km > baseKm) {
-                total += (km - baseKm) * perKmRate;
+            if (km > 2) {
+                total += (km - 2) * perKmRate;
             }
-            return Math.max(minPrice, Math.round(total));
+            total = Math.max(minPrice, total);
+
+            if (isNight) {
+                total *= 1.25; // 25% night shift surcharge
+                document.getElementById('night-badge').classList.remove('hidden');
+            } else {
+                document.getElementById('night-badge').classList.add('hidden');
+            }
+
+            calculatedFare = Math.round(total);
+
+            // Competitor estimation baselines for comparison
+            let cabEstimate = Math.round(calculatedFare * 2.4);
+            let autoEstimate = Math.round(calculatedFare * 1.6);
+
+            document.getElementById('distance-display').innerText = `Distance: ${km.toFixed(1)} km`;
+            if(durationMins > 0) document.getElementById('eta-display').innerText = `ETA: ${durationMins} mins`;
+            document.getElementById('price-display').innerText = `₹${calculatedFare}`;
+            
+            document.getElementById('comp-cab').innerText = `₹${cabEstimate}`;
+            document.getElementById('comp-auto').innerText = `₹${autoEstimate}`;
+
+            document.getElementById('fare-card').classList.remove('hidden');
+            let bookBtn = document.getElementById('book-btn');
+            bookBtn.disabled = false;
+            bookBtn.className = "w-full bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold py-3.5 rounded-xl transition-all shadow-md cursor-pointer text-sm";
+            bookBtn.innerText = `Book Bike - ₹${calculatedFare}`;
         }
 
         function bookRide() {
-            alert(`Booking confirmed! Fare: ₹${calculatedFare} for ${calculatedDistanceKm.toFixed(1)} km.`);
+            let dropText = document.getElementById('drop-text').innerText;
+            let nightActive = document.getElementById('setting-night').checked ? " (Night Shift)" : "";
+            let message = `New Bike Ride Booking!%0a*Fare:* ₹${calculatedFare}${nightActive}%0a*Distance:* ${calculatedDistanceKm.toFixed(1)} km%0a*Drop:* ${dropText}`;
+            
+            // Open direct driver WhatsApp dispatch channel inside the same frame window
+            window.location.href = `https://wa.me/?text=${message}`;
         }
 
         window.onload = initMap;

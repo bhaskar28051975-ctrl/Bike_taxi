@@ -9,92 +9,92 @@
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        #map { height: 210px; width: 100%; z-index: 10; }
+        #map { height: 200px; width: 100%; z-index: 10; }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans">
     <div class="max-w-md mx-auto bg-slate-950 min-h-screen shadow-2xl flex flex-col justify-between relative border-x border-slate-800">
         
         <!-- Header & Settings Toggle -->
-        <div class="bg-slate-900 text-white p-4 flex justify-between items-center z-50 border-b border-slate-800">
+        <div class="bg-slate-900 text-white p-3.5 flex justify-between items-center z-50 border-b border-slate-800">
             <div>
-                <h1 class="font-bold text-sm flex items-center gap-1.5">🏍️ Driver Terminal Pro</h1>
+                <h1 class="font-bold text-xs flex items-center gap-1.5">🏍️ Driver Terminal Pro</h1>
                 <p id="terminal-status" class="text-[10px] text-emerald-400 font-medium">● Online & Ready</p>
             </div>
-            <button onclick="toggleSettings()" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg border border-slate-700 font-medium cursor-pointer">
+            <button onclick="toggleSettings()" class="bg-slate-800 hover:bg-slate-700 text-[11px] px-2.5 py-1 rounded-lg border border-slate-700 font-medium cursor-pointer">
                 ⚙️ Rate Controls
             </button>
         </div>
 
         <!-- Pricing Control Drawer -->
-        <div id="settings-drawer" class="hidden bg-slate-900 text-white p-4 space-y-3 border-b border-slate-800 text-xs z-50">
-            <h2 class="font-bold text-amber-400 text-sm">🎛️ Adjust Pricing Rules</h2>
+        <div id="settings-drawer" class="hidden bg-slate-900 text-white p-3.5 space-y-2.5 border-b border-slate-800 text-xs z-50">
+            <h2 class="font-bold text-amber-400 text-xs">🎛️ Adjust Pricing Rules</h2>
             <div class="grid grid-cols-2 gap-2">
                 <div>
-                    <label class="text-slate-400">Per KM Rate (₹):</label>
-                    <input type="number" id="setting-per-km" value="12" oninput="recalculatePricing()" class="w-full bg-slate-950 border border-slate-700 p-1.5 rounded text-white mt-1">
+                    <label class="text-slate-400 text-[10px]">Per KM Rate (₹):</label>
+                    <input type="number" id="setting-per-km" value="12" oninput="recalculatePricing()" class="w-full bg-slate-950 border border-slate-700 p-1.5 rounded text-white mt-0.5">
                 </div>
                 <div>
-                    <label class="text-slate-400">Base Fare (₹):</label>
-                    <input type="number" id="setting-base" value="20" oninput="recalculatePricing()" class="w-full bg-slate-950 border border-slate-700 p-1.5 rounded text-white mt-1">
+                    <label class="text-slate-400 text-[10px]">Base Fare (₹):</label>
+                    <input type="number" id="setting-base" value="20" oninput="recalculatePricing()" class="w-full bg-slate-950 border border-slate-700 p-1.5 rounded text-white mt-0.5">
                 </div>
             </div>
-            <div class="flex items-center justify-between pt-1">
-                <span class="text-slate-300">🌙 Night Surcharge (+25%):</span>
+            <div class="flex items-center justify-between pt-0.5">
+                <span class="text-slate-300 text-[11px]">🌙 Night Surcharge (+25%):</span>
                 <input type="checkbox" id="setting-night" onchange="recalculatePricing()" class="w-4 h-4 accent-amber-400 cursor-pointer">
             </div>
         </div>
 
         <!-- Destination Search Box -->
-        <div class="p-4 bg-slate-950 shadow-sm relative z-40 space-y-3">
-            <div class="flex items-center bg-slate-900 rounded-xl px-4 py-3 border border-slate-800 shadow-inner">
-                <span class="text-slate-400 mr-2 text-base">📍</span>
+        <div class="p-3 bg-slate-950 shadow-sm relative z-40 space-y-2">
+            <div class="flex items-center bg-slate-900 rounded-xl px-3 py-2.5 border border-slate-800 shadow-inner">
+                <span class="text-slate-400 mr-2 text-sm">📍</span>
                 <input type="text" id="search-input" placeholder="Search customer destination..." 
                        oninput="searchLocation(this.value)"
                        class="bg-transparent w-full focus:outline-none text-slate-100 font-medium text-xs">
             </div>
-            <div id="suggestions-list" class="absolute top-36 left-4 right-4 bg-slate-900 rounded-xl shadow-2xl border border-slate-800 hidden max-h-60 overflow-y-auto z-[9999]"></div>
+            <div id="suggestions-list" class="absolute top-32 left-3 right-3 bg-slate-900 rounded-xl shadow-2xl border border-slate-800 hidden max-h-52 overflow-y-auto z-[9999]"></div>
         </div>
 
         <!-- Map Container -->
         <div class="relative">
             <div id="map"></div>
-            <button onclick="getCurrentLocation()" class="absolute bottom-3 right-3 bg-slate-900 text-slate-200 px-3 py-1.5 rounded-full shadow-md text-xs font-semibold z-20 border border-slate-700">
+            <button onclick="getCurrentLocation()" class="absolute bottom-2.5 right-2.5 bg-slate-900 text-slate-200 px-2.5 py-1 rounded-full shadow-md text-[10px] font-semibold z-20 border border-slate-700">
                 🎯 GPS Lock
             </button>
         </div>
 
         <!-- Bottom Panel -->
-        <div class="p-4 flex-1 flex flex-col justify-between space-y-3 bg-slate-950">
+        <div class="p-3.5 flex-1 flex flex-col justify-between space-y-2.5 bg-slate-950">
             <div class="grid grid-cols-2 gap-2">
-                <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
-                    <p class="text-[10px] text-slate-400 font-bold uppercase">Pickup (Start)</p>
-                    <p id="pickup-text" class="text-xs font-semibold text-slate-200 truncate">Acquiring GPS...</p>
+                <div class="bg-slate-900 p-2 rounded-xl border border-slate-800">
+                    <p class="text-[9px] text-slate-400 font-bold uppercase">Pickup</p>
+                    <p id="pickup-text" class="text-[11px] font-semibold text-slate-200 truncate">Acquiring GPS...</p>
                 </div>
-                <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
-                    <p class="text-[10px] text-slate-400 font-bold uppercase">Drop-off (Destination)</p>
-                    <p id="drop-text" class="text-xs font-semibold text-slate-200 truncate">Select destination</p>
+                <div class="bg-slate-900 p-2 rounded-xl border border-slate-800">
+                    <p class="text-[9px] text-slate-400 font-bold uppercase">Drop-off</p>
+                    <p id="drop-text" class="text-[11px] font-semibold text-slate-200 truncate">Select destination</p>
                 </div>
             </div>
 
             <!-- Price & Market Comparison Card -->
-            <div id="fare-card" class="hidden border-2 border-amber-500 bg-amber-950/30 p-3 rounded-2xl space-y-2">
+            <div id="fare-card" class="hidden border-2 border-amber-500 bg-amber-950/30 p-2.5 rounded-xl space-y-1.5">
                 <div class="flex justify-between items-center">
                     <div>
-                        <span class="font-bold text-white text-xs">🏍️ Negotiation & Bill Preview</span>
-                        <span id="night-badge" class="hidden ml-1 text-[9px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-full font-bold">Night</span>
+                        <span class="font-bold text-white text-[11px]">🏍️ Negotiation Bill Preview</span>
+                        <span id="night-badge" class="hidden ml-1 text-[8px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-full font-bold">Night</span>
                     </div>
-                    <span id="price-display" class="text-lg font-black text-amber-400">₹0</span>
+                    <span id="price-display" class="text-base font-black text-amber-400">₹0</span>
                 </div>
                 
-                <div class="flex justify-between text-[11px] text-slate-300 border-t border-amber-900/50 pt-1 font-medium">
+                <div class="flex justify-between text-[10px] text-slate-300 border-t border-amber-900/50 pt-1 font-medium">
                     <span id="distance-display">Distance: 0 km</span>
                     <span id="eta-display">ETA: 0 mins</span>
                 </div>
 
                 <!-- Market Rates Comparison -->
                 <div class="bg-slate-900/90 p-1.5 rounded-lg border border-amber-900/40 text-[10px] flex justify-between items-center text-slate-300">
-                    <span class="font-semibold text-slate-400">Market Avg:</span>
+                    <span class="font-semibold text-slate-400">Market Rate:</span>
                     <div class="space-x-2">
                         <span>Auto: <strong id="comp-auto" class="text-amber-400">₹0</strong></span>
                         <span>Cab: <strong id="comp-cab" class="text-red-400">₹0</strong></span>
@@ -102,25 +102,21 @@
                 </div>
             </div>
 
-            <!-- In-App Turn-by-Turn Instruction Box -->
-            <div id="nav-instructions" class="hidden bg-slate-900 border border-emerald-500/50 p-2.5 rounded-xl space-y-1">
-                <div class="flex justify-between items-center">
-                    <span class="text-[10px] uppercase tracking-wider text-emerald-400 font-bold">🧭 Shortest Route Nav Active</span>
-                    <span id="nav-km-tag" class="text-[11px] font-bold text-white">0 km</span>
-                </div>
-                <p id="step-instruction" class="text-xs text-slate-200 font-medium">Proceed to starting point.</p>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="space-y-2">
+            <!-- Action Buttons Container -->
+            <div class="space-y-2 pt-1">
+                <!-- Step 1: Start Navigation (Switches to shortest path & enables GPS map link) -->
                 <button onclick="startNavigation()" id="nav-btn" disabled class="w-full bg-slate-800 text-slate-500 font-bold py-2.5 rounded-xl transition-all shadow-sm cursor-not-allowed text-xs flex items-center justify-center gap-1.5">
-                    🧭 Start Shortest Route Navigation
+                    🧭 Start Shortest Route & GPS Nav
                 </button>
+
+                <!-- Step 2: WhatsApp Bill -->
                 <button onclick="shareWhatsAppBill()" id="bill-btn" disabled class="w-full bg-slate-800 text-slate-500 font-bold py-2.5 rounded-xl transition-all shadow-sm cursor-not-allowed text-xs flex items-center justify-center gap-1.5">
                     💬 Send WhatsApp Bill to Customer
                 </button>
-                <button onclick="completeRide()" id="complete-btn" hidden class="w-full bg-red-600 hover:bg-red-700 text-white font-extrabold py-2.5 rounded-xl transition-all shadow-md cursor-pointer text-xs flex items-center justify-center gap-1.5">
-                    🏁 Complete Ride & Find Nearest Bus Stop
+
+                <!-- Step 3: Complete Ride (Hidden until navigation starts) -->
+                <button onclick="completeRide()" id="complete-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-extrabold py-2.5 rounded-xl transition-all shadow-md cursor-pointer text-xs flex items-center justify-center gap-1.5 hidden">
+                    🏁 Complete Ride & Find Bus Stops
                 </button>
             </div>
         </div>
@@ -136,18 +132,15 @@
         let shortestKm = 0;
         let displayKm = 0;
         let calculatedFare = 0;
-        let routeSteps = [];
         let searchTimeout = null;
 
         function initMap() {
-            // Initialize map with default center (Mumbai fallback)
             map = L.map('map').setView([18.922, 72.834], 13);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '© OpenStreetMap'
             }).addTo(map);
 
-            // Fix tile rendering glitches on load
             setTimeout(() => { map.invalidateSize(); }, 200);
 
             map.on('click', function(e) {
@@ -175,7 +168,6 @@
                         if (dropCoords) fetchRouteProfiles();
                     },
                     (error) => { 
-                        // Fallback default coordinates if GPS is blocked
                         pickupCoords = [18.922, 72.834];
                         setPickupPin(pickupCoords);
                         document.getElementById('pickup-text').innerText = `Default Location`;
@@ -193,7 +185,7 @@
                     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
                     iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
                 })
-            }).addTo(map).bindPopup("<b>Start (Pickup)</b>").openPopup();
+            }).addTo(map).bindPopup("<b>Start (Pickup)</b>");
         }
 
         function setDropPin(coords, name) {
@@ -226,7 +218,7 @@
                     if (data.length > 0) {
                         data.forEach(item => {
                             let div = document.createElement('div');
-                            div.className = "p-3 hover:bg-slate-800 border-b border-slate-800 text-xs text-slate-200 cursor-pointer font-medium flex items-center space-x-2";
+                            div.className = "p-2.5 hover:bg-slate-800 border-b border-slate-800 text-xs text-slate-200 cursor-pointer font-medium flex items-center space-x-2";
                             div.innerHTML = `<span class="text-amber-400">📍</span> <span class="truncate">${item.display_name}</span>`;
                             div.onclick = () => {
                                 dropCoords = [parseFloat(item.lat), parseFloat(item.lon)];
@@ -248,7 +240,7 @@
         // Fetch route data from OSRM
         async function fetchRouteProfiles() {
             if (!pickupCoords || !dropCoords) return;
-            const url = `https://router.project-osrm.org/route/v1/driving/${pickupCoords[1]},${pickupCoords[0]};${dropCoords[1]},${dropCoords[0]}?overview=full&geometries=geojson&steps=true`;
+            const url = `https://router.project-osrm.org/route/v1/driving/${pickupCoords[1]},${pickupCoords[0]};${dropCoords[1]},${dropCoords[0]}?overview=full&geometries=geojson`;
             try {
                 let response = await fetch(url);
                 let data = await response.json();
@@ -256,21 +248,16 @@
                     let route = data.routes[0];
                     shortestKm = route.distance / 1000;
                     
-                    // Negotiation buffer (adds ~20% for rider bargaining margin)
+                    // Negotiation buffer (adds ~20% for bargaining)
                     displayKm = shortestKm * 1.20; 
-
-                    if (route.legs && route.legs[0].steps) {
-                        routeSteps = route.legs[0].steps;
-                    }
 
                     if (routeLine) map.removeLayer(routeLine);
                     routeLine = L.geoJSON(route.geometry, {
                         style: { color: '#f59e0b', weight: 6, opacity: 0.9 }
                     }).addTo(map);
 
-                    // Fit map view to show both points and the route line perfectly
                     let bounds = L.latLngBounds([pickupCoords, dropCoords]);
-                    map.fitBounds(bounds, { padding: [50, 50] });
+                    map.fitBounds(bounds, { padding: [40, 40] });
 
                     updatePricingDisplay(displayKm);
                 }
@@ -325,31 +312,32 @@
             billBtn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2.5 rounded-xl transition-all shadow-md cursor-pointer text-xs flex items-center justify-center gap-1.5";
         }
 
-        // Switch to shortest path view and active navigation mode
+        // Start Navigation: Switches to shortest path and opens Google Maps GPS navigation directly
         function startNavigation() {
             if (!dropCoords) return;
 
-            document.getElementById('distance-display').innerText = `Active Route: ${shortestKm.toFixed(1)} km (Shortest)`;
-            document.getElementById('nav-km-tag').innerText = `${shortestKm.toFixed(1)} km`;
-            document.getElementById('nav-instructions').classList.remove('hidden');
-
-            if (routeSteps.length > 0 && routeSteps[0].maneuver) {
-                document.getElementById('step-instruction').innerText = `➡️ ${routeSteps[0].maneuver.instruction || "Head toward route."}`;
-            } else {
-                document.getElementById('step-instruction').innerText = "Follow the highlighted path on map.";
-            }
-
-            document.getElementById('nav-btn').hidden = true;
-            document.getElementById('complete-btn').hidden = false;
-            document.getElementById('terminal-status').innerText = "● Trip in Progress (Shortest Path)";
+            // Switch distance display to shortest route
+            document.getElementById('distance-display').innerText = `Active Shortest Route: ${shortestKm.toFixed(1)} km`;
+            document.getElementById('terminal-status').innerText = "● Trip in Progress";
             document.getElementById('terminal-status').className = "text-[10px] text-amber-400 font-medium";
+
+            // Swap buttons to show Complete Ride and update Nav button text
+            document.getElementById('nav-btn').innerHTML = "🧭 Open Google Maps GPS (Shortest Route)";
+            document.getElementById('nav-btn').onclick = function() {
+                window.open(`https://www.google.com/maps/dir/?api=1&destination=${dropCoords[0]},${dropCoords[1]}&travelmode=driving`, '_blank');
+            };
+            
+            document.getElementById('complete-btn').classList.remove('hidden');
+
+            // Automatically open Google Maps navigation instantly on click
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${dropCoords[0]},${dropCoords[1]}&travelmode=driving`, '_blank');
         }
 
         // Send WhatsApp Bill
         function shareWhatsAppBill() {
             let dropText = document.getElementById('drop-text').innerText;
             let nightActive = document.getElementById('setting-night').checked ? " (Night Shift)" : "";
-            let message = `🧾 *Bike Taxi Ride Bill*:%0a*Fare:* ₹${calculatedFare}${nightActive}%0a*Distance:* ${displayKm.toFixed(1)} km%0a*Drop:* ${dropText}%0a%0aThank you for riding with us!`;
+            let message = `🧾 *Bike Taxi Bill*:%0a*Fare:* ₹${calculatedFare}${nightActive}%0a*Distance:* ${displayKm.toFixed(1)} km%0a*Drop:* ${dropText}%0a%0aThank you for riding with us!`;
             window.location.href = `https://wa.me/?text=${message}`;
         }
 
@@ -380,7 +368,7 @@
                             }).addTo(map).bindPopup(`🚌 Bus Stop: ${stop.tags.name || 'Local Stop'}`);
                             busStopMarkers.push(marker);
                         });
-                        alert(`Trip completed! Found ${data.elements.length} nearby bus stops around the destination.`);
+                        alert(`Trip completed! Found ${data.elements.length} nearby bus stops around destination.`);
                     } else {
                         alert("Trip completed successfully! No major bus stops found within 2km.");
                     }

@@ -9,7 +9,7 @@
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        #map { height: 220px; width: 100%; z-index: 10; }
+        #map { height: 210px; width: 100%; z-index: 10; }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans">
@@ -18,30 +18,30 @@
         <!-- Header & Settings Toggle -->
         <div class="bg-slate-900 text-white p-4 flex justify-between items-center z-50 border-b border-slate-800">
             <div>
-                <h1 class="font-bold text-sm flex items-center gap-1.5">👨‍✈️ RapidRide Terminal</h1>
+                <h1 class="font-bold text-sm flex items-center gap-1.5">🏍️ Driver Terminal Pro</h1>
                 <p id="terminal-status" class="text-[10px] text-emerald-400 font-medium">● Online & Ready</p>
             </div>
             <button onclick="toggleSettings()" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg border border-slate-700 font-medium cursor-pointer">
-                ⚙️ Fare Settings
+                ⚙️ Rate Controls
             </button>
         </div>
 
         <!-- Pricing Control Drawer -->
         <div id="settings-drawer" class="hidden bg-slate-900 text-white p-4 space-y-3 border-b border-slate-800 text-xs z-50">
-            <h2 class="font-bold text-amber-400 text-sm">🎛️ Fare Controls</h2>
+            <h2 class="font-bold text-amber-400 text-sm">🎛️ Adjust Pricing Rules</h2>
             <div class="grid grid-cols-2 gap-2">
                 <div>
                     <label class="text-slate-400">Per KM Rate (₹):</label>
-                    <input type="number" id="setting-per-km" value="12" oninput="updatePricingConfig()" class="w-full bg-slate-950 border border-slate-700 p-1.5 rounded text-white mt-1">
+                    <input type="number" id="setting-per-km" value="12" oninput="recalculatePricing()" class="w-full bg-slate-950 border border-slate-700 p-1.5 rounded text-white mt-1">
                 </div>
                 <div>
                     <label class="text-slate-400">Base Fare (₹):</label>
-                    <input type="number" id="setting-base" value="20" oninput="updatePricingConfig()" class="w-full bg-slate-950 border border-slate-700 p-1.5 rounded text-white mt-1">
+                    <input type="number" id="setting-base" value="20" oninput="recalculatePricing()" class="w-full bg-slate-950 border border-slate-700 p-1.5 rounded text-white mt-1">
                 </div>
             </div>
             <div class="flex items-center justify-between pt-1">
-                <span class="text-slate-300">🌙 Night Shift (+25%):</span>
-                <input type="checkbox" id="setting-night" onchange="updatePricingConfig()" class="w-4 h-4 accent-amber-400 cursor-pointer">
+                <span class="text-slate-300">🌙 Night Surcharge (+25%):</span>
+                <input type="checkbox" id="setting-night" onchange="recalculatePricing()" class="w-4 h-4 accent-amber-400 cursor-pointer">
             </div>
         </div>
 
@@ -64,7 +64,7 @@
             </button>
         </div>
 
-        <!-- Bottom Details Panel -->
+        <!-- Bottom Panel -->
         <div class="p-4 flex-1 flex flex-col justify-between space-y-3 bg-slate-950">
             <div class="grid grid-cols-2 gap-2">
                 <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
@@ -77,40 +77,50 @@
                 </div>
             </div>
 
-            <!-- Price & Distance Bill Preview Card -->
-            <div id="fare-card" class="hidden border-2 border-amber-500 bg-amber-950/30 p-3.5 rounded-2xl space-y-2">
+            <!-- Price & Market Comparison Card -->
+            <div id="fare-card" class="hidden border-2 border-amber-500 bg-amber-950/30 p-3 rounded-2xl space-y-2">
                 <div class="flex justify-between items-center">
                     <div>
-                        <span class="font-bold text-white text-sm">🏍️ Customer Bill Preview</span>
-                        <span id="night-badge" class="hidden ml-1 text-[10px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-full font-bold">Night</span>
+                        <span class="font-bold text-white text-xs">🏍️ Negotiation & Bill Preview</span>
+                        <span id="night-badge" class="hidden ml-1 text-[9px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-full font-bold">Night</span>
                     </div>
-                    <span id="price-display" class="text-xl font-black text-amber-400">₹0</span>
+                    <span id="price-display" class="text-lg font-black text-amber-400">₹0</span>
                 </div>
-                <div class="flex justify-between text-xs text-slate-300 border-t border-amber-900/50 pt-1.5 font-medium">
+                
+                <div class="flex justify-between text-[11px] text-slate-300 border-t border-amber-900/50 pt-1 font-medium">
                     <span id="distance-display">Distance: 0 km</span>
                     <span id="eta-display">ETA: 0 mins</span>
                 </div>
-            </div>
 
-            <!-- Inbuilt Navigation Instructions Box (Hidden until trip starts) -->
-            <div id="nav-instructions" class="hidden bg-slate-900 border border-emerald-500/50 p-3 rounded-xl space-y-1">
-                <div class="flex justify-between items-center">
-                    <span class="text-[10px] uppercase tracking-wider text-emerald-400 font-bold">🧭 Inbuilt Navigation Active</span>
-                    <span id="nav-mode-dist" class="text-xs font-bold text-white">Shortest Route</span>
+                <!-- Market Rates Comparison -->
+                <div class="bg-slate-900/90 p-1.5 rounded-lg border border-amber-900/40 text-[10px] flex justify-between items-center text-slate-300">
+                    <span class="font-semibold text-slate-400">Market Avg:</span>
+                    <div class="space-x-2">
+                        <span>Auto: <strong id="comp-auto" class="text-amber-400">₹0</strong></span>
+                        <span>Cab: <strong id="comp-cab" class="text-red-400">₹0</strong></span>
+                    </div>
                 </div>
-                <p id="step-instruction" class="text-xs text-slate-200 font-medium">Head toward the main road and follow optimal path.</p>
             </div>
 
-            <!-- Driver Action Buttons Flow -->
+            <!-- In-App Turn-by-Turn Instruction Box -->
+            <div id="nav-instructions" class="hidden bg-slate-900 border border-emerald-500/50 p-2.5 rounded-xl space-y-1">
+                <div class="flex justify-between items-center">
+                    <span class="text-[10px] uppercase tracking-wider text-emerald-400 font-bold">🧭 Shortest Route Nav Active</span>
+                    <span id="nav-km-tag" class="text-[11px] font-bold text-white">0 km</span>
+                </div>
+                <p id="step-instruction" class="text-xs text-slate-200 font-medium">Proceed to starting point.</p>
+            </div>
+
+            <!-- Action Buttons -->
             <div class="space-y-2">
-                <button onclick="startInbuiltNavigation()" id="nav-btn" disabled class="w-full bg-slate-800 text-slate-500 font-bold py-3 rounded-xl transition-all shadow-sm cursor-not-allowed text-xs flex items-center justify-center gap-1.5">
-                    🧭 Start Inbuilt Navigation (Shortest Route)
+                <button onclick="startNavigation()" id="nav-btn" disabled class="w-full bg-slate-800 text-slate-500 font-bold py-2.5 rounded-xl transition-all shadow-sm cursor-not-allowed text-xs flex items-center justify-center gap-1.5">
+                    🧭 Start Shortest Route Navigation
                 </button>
-                <button onclick="shareWhatsAppBill()" id="bill-btn" disabled class="w-full bg-slate-800 text-slate-500 font-bold py-3 rounded-xl transition-all shadow-sm cursor-not-allowed text-xs flex items-center justify-center gap-1.5">
-                    💬 Send WhatsApp Bill
+                <button onclick="shareWhatsAppBill()" id="bill-btn" disabled class="w-full bg-slate-800 text-slate-500 font-bold py-2.5 rounded-xl transition-all shadow-sm cursor-not-allowed text-xs flex items-center justify-center gap-1.5">
+                    💬 Send WhatsApp Bill to Customer
                 </button>
-                <button onclick="completeRide()" id="complete-btn" hidden class="w-full bg-red-600 hover:bg-red-700 text-white font-extrabold py-3 rounded-xl transition-all shadow-md cursor-pointer text-xs flex items-center justify-center gap-1.5">
-                    🏁 Complete Ride & Reset
+                <button onclick="completeRide()" id="complete-btn" hidden class="w-full bg-red-600 hover:bg-red-700 text-white font-extrabold py-2.5 rounded-xl transition-all shadow-md cursor-pointer text-xs flex items-center justify-center gap-1.5">
+                    🏁 Complete Ride & Find Nearest Bus Stop
                 </button>
             </div>
         </div>
@@ -119,14 +129,14 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        let map, pickupMarker, dropMarker, routeLine;
+        let map, pickupMarker, dropMarker, routeLine, busStopMarkers = [];
         let pickupCoords = null;
         let dropCoords = null;
-        let actualKm = 0;      // Shortest route
-        let displayedKm = 0;   // Longer route shown initially to customer
+        let shortestKm = 0;
+        let displayKm = 0;
         let calculatedFare = 0;
-        let searchTimeout = null;
         let routeSteps = [];
+        let searchTimeout = null;
 
         function initMap() {
             map = L.map('map').setView([18.922, 72.834], 13);
@@ -137,8 +147,8 @@
 
             map.on('click', function(e) {
                 dropCoords = [e.latlng.lat, e.latlng.lng];
-                setDropPin(dropCoords, "Pinned Location");
-                if (pickupCoords) fetchRouteData();
+                setDropPin(dropCoords, "Pinned Destination");
+                if (pickupCoords) fetchRouteProfiles();
             });
             getCurrentLocation();
         }
@@ -155,7 +165,7 @@
                         setPickupPin(pickupCoords);
                         document.getElementById('pickup-text').innerText = `GPS Locked`;
                         map.setView(pickupCoords, 14);
-                        if (dropCoords) fetchRouteData();
+                        if (dropCoords) fetchRouteProfiles();
                     },
                     (error) => { alert("Please enable GPS permissions."); },
                     { enableHighAccuracy: true }
@@ -205,7 +215,7 @@
                                 document.getElementById('search-input').value = item.display_name;
                                 listDiv.classList.add('hidden');
                                 setDropPin(dropCoords, item.display_name);
-                                if (pickupCoords) fetchRouteData();
+                                if (pickupCoords) fetchRouteProfiles();
                             };
                             listDiv.appendChild(div);
                         });
@@ -217,47 +227,41 @@
             }, 300);
         }
 
-        // Fetch routes from OSRM with turn steps and alternatives
-        async function fetchRouteData() {
+        // Fetch route data: Initially show a higher negotiation distance, keeping shortest path ready for booking
+        async function fetchRouteProfiles() {
             if (!pickupCoords || !dropCoords) return;
-            const url = `https://router.project-osrm.org/route/v1/driving/${pickupCoords[1]},${pickupCoords[0]};${dropCoords[1]},${dropCoords[0]}?overview=full&geometries=geojson&steps=true&alternatives=true`;
+            const url = `https://router.project-osrm.org/route/v1/driving/${pickupCoords[1]},${pickupCoords[0]};${dropCoords[1]},${dropCoords[0]}?overview=full&geometries=geojson&steps=true`;
             try {
                 let response = await fetch(url);
                 let data = await response.json();
                 if (data.routes && data.routes.length > 0) {
-                    // Shortest route is routes[0]
-                    let shortestRoute = data.routes[0];
-                    actualKm = shortestRoute.distance / 1000;
+                    let route = data.routes[0];
+                    shortestKm = route.distance / 1000;
                     
-                    // Add buffer/longer distance for initial customer bill view (~15-25% longer variant or padded)
-                    displayedKm = actualKm * 1.22; 
-                    
-                    // Extract turn-by-turn instruction steps if available
-                    if (shortestRoute.legs && shortestRoute.legs[0].steps) {
-                        routeSteps = shortestRoute.legs[0].steps;
+                    // Add buffer for negotiation (e.g., ~20% higher so driver has margin to offer discounts during bargaining)
+                    displayKm = shortestKm * 1.20; 
+
+                    if (route.legs && route.legs[0].steps) {
+                        routeSteps = route.legs[0].steps;
                     }
 
-                    let durationMins = Math.round(shortestRoute.duration / 60);
-
                     if (routeLine) map.removeLayer(routeLine);
-                    routeLine = L.geoJSON(shortestRoute.geometry, {
+                    routeLine = L.geoJSON(route.geometry, {
                         style: { color: '#f59e0b', weight: 6, opacity: 0.9 }
                     }).addTo(map);
 
-                    // Initially show the longer distance/fare to the customer
-                    updateFareDisplay(displayedKm, durationMins);
+                    updatePricingDisplay(displayKm);
                 }
             } catch (err) { console.error(err); }
         }
 
-        function updatePricingConfig() {
-            if (displayedKm > 0) {
-                let durationMins = Math.round((displayedKm / 25) * 60);
-                updateFareDisplay(displayedKm, durationMins);
+        function recalculatePricing() {
+            if (displayKm > 0) {
+                updatePricingDisplay(displayKm);
             }
         }
 
-        function updateFareDisplay(km, durationMins) {
+        function updatePricingDisplay(km) {
             const baseFare = parseFloat(document.getElementById('setting-base').value) || 20;
             const perKmRate = parseFloat(document.getElementById('setting-per-km').value) || 12;
             const isNight = document.getElementById('setting-night').checked;
@@ -270,50 +274,54 @@
             total = Math.max(minPrice, total);
 
             if (isNight) {
-                total *= 1.25; 
+                total *= 1.25;
                 document.getElementById('night-badge').classList.remove('hidden');
             } else {
                 document.getElementById('night-badge').classList.add('hidden');
             }
 
             calculatedFare = Math.round(total);
+            let durationMins = Math.round((km / 25) * 60);
 
-            document.getElementById('distance-display').innerText = `Distance: ${km.toFixed(1)} km`;
-            if(durationMins > 0) document.getElementById('eta-display').innerText = `ETA: ${durationMins} mins`;
+            // Competitor comparisons
+            let autoEst = Math.round(calculatedFare * 1.5);
+            let cabEst = Math.round(calculatedFare * 2.3);
+
+            document.getElementById('distance-display').innerText = `Negotiation Distance: ${km.toFixed(1)} km`;
+            document.getElementById('eta-display').innerText = `ETA: ~${durationMins} mins`;
             document.getElementById('price-display').innerText = `₹${calculatedFare}`;
+            document.getElementById('comp-auto').innerText = `₹${autoEst}`;
+            document.getElementById('comp-cab').innerText = `₹${cabEst}`;
 
             document.getElementById('fare-card').classList.remove('hidden');
-            
-            // Activate action buttons
+
+            // Enable action buttons
             let navBtn = document.getElementById('nav-btn');
             navBtn.disabled = false;
-            navBtn.className = "w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold py-3 rounded-xl transition-all shadow-md cursor-pointer text-xs flex items-center justify-center gap-1.5";
+            navBtn.className = "w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold py-2.5 rounded-xl transition-all shadow-md cursor-pointer text-xs flex items-center justify-center gap-1.5";
 
             let billBtn = document.getElementById('bill-btn');
             billBtn.disabled = false;
-            billBtn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3 rounded-xl transition-all shadow-md cursor-pointer text-xs flex items-center justify-center gap-1.5";
+            billBtn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2.5 rounded-xl transition-all shadow-md cursor-pointer text-xs flex items-center justify-center gap-1.5";
         }
 
-        // Start Inbuilt Navigation (Switches to Shortest Route view internally)
-        function startInbuiltNavigation() {
-            if (!pickupCoords || !dropCoords) return;
+        // Start Navigation: Switches instantly to shortest path metrics and instructions
+        function startNavigation() {
+            if (!dropCoords) return;
 
-            // Update display to the actual shorter route for navigation performance
-            document.getElementById('distance-display').innerText = `Distance: ${actualKm.toFixed(1)} km (Shortest)`;
-            document.getElementById('nav-mode-dist').innerText = `${actualKm.toFixed(1)} km route`;
-            
-            // Show inbuilt navigation guidance box
+            document.getElementById('distance-display').innerText = `Active Route: ${shortestKm.toFixed(1)} km (Shortest)`;
+            document.getElementById('nav-km-tag').innerText = `${shortestKm.toFixed(1)} km`;
             document.getElementById('nav-instructions').classList.remove('hidden');
+
             if (routeSteps.length > 0 && routeSteps[0].maneuver) {
-                document.getElementById('step-instruction').innerText = `➡️ ${routeSteps[0].maneuver.instruction || "Proceed on route."}`;
+                document.getElementById('step-instruction').innerText = `➡️ ${routeSteps[0].maneuver.instruction || "Head toward route."}`;
             } else {
-                document.getElementById('step-instruction').innerText = "Follow highlighted path directly to destination.";
+                document.getElementById('step-instruction').innerText = "Follow the highlighted path on map.";
             }
 
-            // Swap buttons to show Complete Ride option
             document.getElementById('nav-btn').hidden = true;
             document.getElementById('complete-btn').hidden = false;
-            document.getElementById('terminal-status').innerText = "● Trip in Progress (Inbuilt Nav)";
+            document.getElementById('terminal-status').innerText = "● Trip in Progress";
             document.getElementById('terminal-status').className = "text-[10px] text-amber-400 font-medium";
         }
 
@@ -321,14 +329,46 @@
         function shareWhatsAppBill() {
             let dropText = document.getElementById('drop-text').innerText;
             let nightActive = document.getElementById('setting-night').checked ? " (Night Shift)" : "";
-            let message = `🧾 *RapidRide Bike Taxi Bill*:%0a*Fare:* ₹${calculatedFare}${nightActive}%0a*Distance:* ${displayedKm.toFixed(1)} km%0a*Drop:* ${dropText}%0a%0aThank you for riding with us!`;
+            let message = `🧾 *Bike Taxi Ride Bill*:%0a*Fare:* ₹${calculatedFare}${nightActive}%0a*Distance:* ${displayKm.toFixed(1)} km%0a*Drop:* ${dropText}%0a%0aThank you for riding with us!`;
             window.location.href = `https://wa.me/?text=${message}`;
         }
 
-        // Complete Ride & Reset App state
-        function completeRide() {
-            alert("Trip completed successfully!");
-            location.reload();
+        // Complete Ride & Fetch Nearest Bus Stops via Overpass API
+        async function completeRide() {
+            document.getElementById('terminal-status').innerText = "● Trip Completed - Finding Bus Stops...";
+            document.getElementById('complete-btn').disabled = true;
+            document.getElementById('complete-btn').innerText = "📍 Locating Nearby Bus Stops...";
+
+            if (dropCoords) {
+                let lat = dropCoords[0];
+                let lon = dropCoords[1];
+                let query = `[out:json];node["highway"="bus_stop"](around:2000,${lat},${lon});out body;`;
+                let url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+                
+                try {
+                    let response = await fetch(url);
+                    let data = await response.json();
+                    
+                    if (data.elements && data.elements.length > 0) {
+                        data.elements.slice(0, 5).forEach(stop => {
+                            let marker = L.marker([stop.lat, stop.lon], {
+                                icon: L.icon({
+                                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+                                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                                    iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+                                })
+                            }).addTo(map).bindPopup(`🚌 Bus Stop: ${stop.tags.name || 'Local Stop'}`);
+                            busStopMarkers.push(marker);
+                        });
+                        alert(`Trip completed! Found ${data.elements.length} nearby bus stops around the destination.`);
+                    } else {
+                        alert("Trip completed! No major bus stops found directly within 2km.");
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert("Trip completed successfully!");
+                }
+            }
         }
 
         window.onload = initMap;

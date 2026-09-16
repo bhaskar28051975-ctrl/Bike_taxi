@@ -3,121 +3,210 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Driver Bike Taxi Terminal</title>
+    <title>Bike & Cab Booking</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        #map { height: 200px; width: 100%; z-index: 10; }
+        #map { height: 100vh; width: 100%; position: absolute; top: 0; left: 0; z-index: 0; }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 font-sans">
-    <div class="max-w-md mx-auto bg-slate-950 min-h-screen shadow-2xl flex flex-col justify-between relative border-x border-slate-800">
+<body class="bg-gray-100 font-sans text-gray-800 overflow-hidden relative">
+
+    <!-- Fullscreen Map Background -->
+    <div id="map"></div>
+
+    <!-- Top Floating Back Button (Visible when searching/booking) -->
+    <button id="back-btn" onclick="resetToHome()" class="hidden absolute top-4 left-4 z-30 bg-white p-3 rounded-full shadow-lg border border-gray-200 cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+    </button>
+
+    <!-- UI Container Overlay -->
+    <div class="absolute inset-x-0 bottom-0 z-20 flex flex-col justify-end pointer-events-none">
         
-        <!-- Header & Settings Toggle -->
-        <div class="bg-slate-900 text-white p-3.5 flex justify-between items-center z-50 border-b border-slate-800">
-            <div>
-                <h1 class="font-bold text-xs flex items-center gap-1.5">🏍️ Driver Terminal Pro</h1>
-                <p id="terminal-status" class="text-[10px] text-emerald-400 font-medium">● Online & Ready</p>
-            </div>
-            <button onclick="toggleSettings()" class="bg-slate-800 hover:bg-slate-700 text-[11px] px-2.5 py-1 rounded-lg border border-slate-700 font-medium cursor-pointer">
-                ⚙️ Rate Controls
-            </button>
-        </div>
-
-        <!-- Pricing Control Drawer -->
-        <div id="settings-drawer" class="hidden bg-slate-900 text-white p-3.5 space-y-2.5 border-b border-slate-800 text-xs z-50">
-            <h2 class="font-bold text-amber-400 text-xs">🎛️ Adjust Pricing Rules</h2>
-            <div class="grid grid-cols-2 gap-2">
-                <div>
-                    <label class="text-slate-400 text-[10px]">Per KM Rate (₹):</label>
-                    <input type="number" id="setting-per-km" value="12" oninput="recalculatePricing()" class="w-full bg-slate-950 border border-slate-700 p-1.5 rounded text-white mt-0.5">
+        <!-- STATE 1: Home Screen (Rapido Style) -->
+        <div id="home-view" class="bg-white rounded-t-3xl shadow-2xl p-5 pointer-events-auto transition-all duration-300">
+            <!-- Pickup Point Pill -->
+            <div class="flex items-center justify-between bg-emerald-50 border border-emerald-200 px-4 py-2.5 rounded-full mb-4 shadow-sm">
+                <div class="flex items-center space-x-2">
+                    <span class="w-2.5 h-2.5 bg-emerald-600 rounded-full animate-pulse"></span>
+                    <span id="current-loc-label" class="text-xs font-bold text-emerald-800">Pickup Point: GPS Locked</span>
                 </div>
-                <div>
-                    <label class="text-slate-400 text-[10px]">Base Fare (₹):</label>
-                    <input type="number" id="setting-base" value="20" oninput="recalculatePricing()" class="w-full bg-slate-950 border border-slate-700 p-1.5 rounded text-white mt-0.5">
-                </div>
-            </div>
-            <div class="flex items-center justify-between pt-0.5">
-                <span class="text-slate-300 text-[11px]">🌙 Night Surcharge (+25%):</span>
-                <input type="checkbox" id="setting-night" onchange="recalculatePricing()" class="w-4 h-4 accent-amber-400 cursor-pointer">
-            </div>
-        </div>
-
-        <!-- Destination Search Box -->
-        <div class="p-3 bg-slate-950 shadow-sm relative z-40 space-y-2">
-            <div class="flex items-center bg-slate-900 rounded-xl px-3 py-2.5 border border-slate-800 shadow-inner">
-                <span class="text-slate-400 mr-2 text-sm">📍</span>
-                <input type="text" id="search-input" placeholder="Search customer destination..." 
-                       oninput="searchLocation(this.value)"
-                       class="bg-transparent w-full focus:outline-none text-slate-100 font-medium text-xs">
-            </div>
-            <div id="suggestions-list" class="absolute top-32 left-3 right-3 bg-slate-900 rounded-xl shadow-2xl border border-slate-800 hidden max-h-52 overflow-y-auto z-[9999]"></div>
-        </div>
-
-        <!-- Map Container -->
-        <div class="relative">
-            <div id="map"></div>
-            <button onclick="getCurrentLocation()" class="absolute bottom-2.5 right-2.5 bg-slate-900 text-slate-200 px-2.5 py-1 rounded-full shadow-md text-[10px] font-semibold z-20 border border-slate-700">
-                🎯 GPS Lock
-            </button>
-        </div>
-
-        <!-- Bottom Panel -->
-        <div class="p-3.5 flex-1 flex flex-col justify-between space-y-2.5 bg-slate-950">
-            <div class="grid grid-cols-2 gap-2">
-                <div class="bg-slate-900 p-2 rounded-xl border border-slate-800">
-                    <p class="text-[9px] text-slate-400 font-bold uppercase">Pickup</p>
-                    <p id="pickup-text" class="text-[11px] font-semibold text-slate-200 truncate">Acquiring GPS...</p>
-                </div>
-                <div class="bg-slate-900 p-2 rounded-xl border border-slate-800">
-                    <p class="text-[9px] text-slate-400 font-bold uppercase">Drop-off</p>
-                    <p id="drop-text" class="text-[11px] font-semibold text-slate-200 truncate">Select destination</p>
-                </div>
+                <span class="text-[10px] bg-emerald-600 text-white font-semibold px-2 py-0.5 rounded-full">Change</span>
             </div>
 
-            <!-- Price & Market Comparison Card -->
-            <div id="fare-card" class="hidden border-2 border-amber-500 bg-amber-950/30 p-2.5 rounded-xl space-y-1.5">
-                <div class="flex justify-between items-center">
+            <!-- Search Bar Trigger -->
+            <div onclick="openSearchModal()" class="flex items-center bg-gray-50 border border-gray-200 rounded-2xl p-4 shadow-sm cursor-pointer hover:bg-gray-100 transition-all mb-5">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <span class="text-gray-500 font-semibold text-sm">Where do you want to go?</span>
+            </div>
+
+            <!-- Quick Service Banners / Grid -->
+            <div class="grid grid-cols-2 gap-3 mb-5">
+                <div class="bg-amber-50 border border-amber-200/60 p-3.5 rounded-2xl flex items-center space-x-3 shadow-sm">
+                    <span class="text-2xl">⚡</span>
                     <div>
-                        <span class="font-bold text-white text-[11px]">🏍️ Negotiation Bill Preview</span>
-                        <span id="night-badge" class="hidden ml-1 text-[8px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-full font-bold">Night</span>
+                        <span class="text-[10px] bg-amber-500 text-white font-bold px-1.5 py-0.5 rounded uppercase">New</span>
+                        <h3 class="font-bold text-xs text-amber-900 mt-0.5">Priority Cab</h3>
+                        <p class="text-[10px] text-amber-700/80">Get rides faster</p>
                     </div>
-                    <span id="price-display" class="text-base font-black text-amber-400">₹0</span>
                 </div>
-                
-                <div class="flex justify-between text-[10px] text-slate-300 border-t border-amber-900/50 pt-1 font-medium">
-                    <span id="distance-display">Distance: 0 km</span>
-                    <span id="eta-display">ETA: 0 mins</span>
-                </div>
-
-                <!-- Market Rates Comparison -->
-                <div class="bg-slate-900/90 p-1.5 rounded-lg border border-amber-900/40 text-[10px] flex justify-between items-center text-slate-300">
-                    <span class="font-semibold text-slate-400">Market Rate:</span>
-                    <div class="space-x-2">
-                        <span>Auto: <strong id="comp-auto" class="text-amber-400">₹0</strong></span>
-                        <span>Cab: <strong id="comp-cab" class="text-red-400">₹0</strong></span>
+                <div class="bg-blue-50 border border-blue-200/60 p-3.5 rounded-2xl flex items-center space-x-3 shadow-sm">
+                    <span class="text-2xl">🎫</span>
+                    <div>
+                        <h3 class="font-bold text-xs text-blue-900">Metro Tickets</h3>
+                        <p class="text-[10px] text-blue-700/80">Skip the queue</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Action Buttons Container -->
-            <div class="space-y-2 pt-1">
-                <!-- Step 1: Start Navigation (Switches to shortest path & enables GPS map link) -->
-                <button onclick="startNavigation()" id="nav-btn" disabled class="w-full bg-slate-800 text-slate-500 font-bold py-2.5 rounded-xl transition-all shadow-sm cursor-not-allowed text-xs flex items-center justify-center gap-1.5">
-                    🧭 Start Shortest Route & GPS Nav
-                </button>
+            <!-- Bottom Navigation Bar -->
+            <div class="grid grid-cols-4 pt-3 border-t border-gray-100 text-center">
+                <div class="flex flex-col items-center text-amber-500 cursor-pointer">
+                    <span class="text-lg">🏍️</span>
+                    <span class="text-[10px] font-bold mt-0.5">Ride</span>
+                </div>
+                <div class="flex flex-col items-center text-gray-400 cursor-pointer hover:text-gray-600">
+                    <span class="text-lg">📦</span>
+                    <span class="text-[10px] font-medium mt-0.5">Parcel</span>
+                </div>
+                <div class="flex flex-col items-center text-gray-400 cursor-pointer hover:text-gray-600">
+                    <span class="text-lg">✈️</span>
+                    <span class="text-[10px] font-medium mt-0.5">Travel</span>
+                </div>
+                <div class="flex flex-col items-center text-gray-400 cursor-pointer hover:text-gray-600">
+                    <span class="text-lg">👤</span>
+                    <span class="text-[10px] font-medium mt-0.5">Profile</span>
+                </div>
+            </div>
+        </div>
 
-                <!-- Step 2: WhatsApp Bill -->
-                <button onclick="shareWhatsAppBill()" id="bill-btn" disabled class="w-full bg-slate-800 text-slate-500 font-bold py-2.5 rounded-xl transition-all shadow-sm cursor-not-allowed text-xs flex items-center justify-center gap-1.5">
-                    💬 Send WhatsApp Bill to Customer
-                </button>
+        <!-- STATE 2: Vehicle Selection & Clean Fares (No Cut Prices) -->
+        <div id="booking-view" class="hidden bg-white rounded-t-3xl shadow-2xl p-5 pointer-events-auto space-y-4 max-h-[75vh] overflow-y-auto">
+            <h2 class="font-bold text-sm text-gray-900">Choose a ride</h2>
+            
+            <!-- Vehicle Options List -->
+            <div class="space-y-2.5">
+                <!-- Bike Option -->
+                <div onclick="selectVehicle('Bike', 102)" class="border-2 border-amber-400 bg-amber-50/40 p-3.5 rounded-2xl flex items-center justify-between cursor-pointer shadow-sm">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-3xl">🏍️</span>
+                        <div>
+                            <div class="flex items-center space-x-1.5">
+                                <span class="font-bold text-xs text-gray-900">Bike</span>
+                                <span class="bg-amber-100 text-amber-800 text-[9px] font-extrabold px-1.5 py-0.5 rounded">FASTEST</span>
+                            </div>
+                            <p class="text-[10px] text-gray-500 mt-0.5">3 mins away • Drop 5:31 pm</p>
+                        </div>
+                    </div>
+                    <!-- Clean Final Price (Cut price removed) -->
+                    <div class="text-right">
+                        <span class="font-black text-base text-gray-900">₹102</span>
+                    </div>
+                </div>
 
-                <!-- Step 3: Complete Ride (Hidden until navigation starts) -->
-                <button onclick="completeRide()" id="complete-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-extrabold py-2.5 rounded-xl transition-all shadow-md cursor-pointer text-xs flex items-center justify-center gap-1.5 hidden">
-                    🏁 Complete Ride & Find Bus Stops
-                </button>
+                <!-- Scooty Option -->
+                <div onclick="selectVehicle('Scooty', 117)" class="border border-gray-200 hover:border-gray-300 p-3.5 rounded-2xl flex items-center justify-between cursor-pointer bg-white shadow-sm">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-3xl">🛵</span>
+                        <div>
+                            <span class="font-bold text-xs text-gray-900">Scooty</span>
+                            <p class="text-[10px] text-gray-500 mt-0.5">3 mins away • Drop 5:31 pm</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="font-black text-base text-gray-900">₹117</span>
+                    </div>
+                </div>
+
+                <!-- Cab Economy Option -->
+                <div onclick="selectVehicle('Cab Economy', 184)" class="border border-gray-200 hover:border-gray-300 p-3.5 rounded-2xl flex items-center justify-between cursor-pointer bg-white shadow-sm">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-3xl">🛺</span>
+                        <div>
+                            <span class="font-bold text-xs text-gray-900">Cab Economy</span>
+                            <p class="text-[10px] text-gray-500 mt-0.5">3 mins away • Drop 5:38 pm</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="font-black text-base text-gray-900">₹184</span>
+                    </div>
+                </div>
+
+                <!-- Cab Priority Option -->
+                <div onclick="selectVehicle('Cab Priority', 244)" class="border border-gray-200 hover:border-gray-300 p-3.5 rounded-2xl flex items-center justify-between cursor-pointer bg-white shadow-sm">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-3xl">🚙</span>
+                        <div>
+                            <span class="font-bold text-xs text-gray-900">Cab Priority</span>
+                            <p class="text-[10px] text-gray-500 mt-0.5">3 mins away • Drop 5:38 pm</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="font-black text-base text-gray-900">₹244</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment & Coupon Bar -->
+            <div class="flex items-center justify-between bg-gray-50 border border-gray-200 p-3 rounded-xl text-xs font-semibold text-gray-700">
+                <div class="flex items-center space-x-2">
+                    <span>💵 Cash</span>
+                </div>
+                <div class="text-amber-600 font-bold">
+                    🎟️ BIKE50 Applied
+                </div>
+            </div>
+
+            <!-- Action Button -->
+            <button id="book-action-btn" onclick="confirmBooking()" class="w-full bg-amber-400 hover:bg-amber-500 text-gray-950 font-extrabold py-3.5 rounded-2xl shadow-md transition-all text-xs cursor-pointer">
+                Book Bike (₹102)
+            </button>
+        </div>
+
+    </div>
+
+    <!-- STATE 3: Location Search Fullscreen Overlay -->
+    <div id="search-modal" class="hidden fixed inset-0 bg-white z-50 p-4 flex flex-col space-y-4">
+        <div class="flex items-center space-x-3 border-b border-gray-100 pb-3">
+            <button onclick="closeSearchModal()" class="text-gray-600 p-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+            </button>
+            <h2 class="font-bold text-sm text-gray-900">Select Destination</h2>
+        </div>
+
+        <!-- Inputs Box -->
+        <div class="bg-gray-50 border border-gray-200 p-3 rounded-2xl space-y-2.5">
+            <div class="flex items-center space-x-2 text-xs">
+                <span class="w-2.5 h-2.5 bg-emerald-600 rounded-full"></span>
+                <input type="text" value="Your Current Location" readonly class="bg-transparent w-full text-gray-600 font-medium focus:outline-none">
+            </div>
+            <div class="border-t border-gray-200 pt-2 flex items-center space-x-2 text-xs">
+                <span class="w-2.5 h-2.5 bg-red-600 rounded-full"></span>
+                <input type="text" id="destination-input" placeholder="Search drop location..." oninput="searchDest(this.value)" class="bg-transparent w-full text-gray-900 font-bold focus:outline-none">
+            </div>
+        </div>
+
+        <!-- Suggestions List -->
+        <div id="search-results" class="flex-1 overflow-y-auto space-y-2">
+            <div onclick="selectDestination('Dadar Railway Station')" class="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl cursor-pointer border border-gray-100">
+                <p class="font-bold text-xs text-gray-900">🕒 Dadar Railway Station</p>
+                <p class="text-[10px] text-gray-500">Dr Babasaheb Ambedkar Rd, Dadar East</p>
+            </div>
+            <div onclick="selectDestination('Churchgate Station')" class="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl cursor-pointer border border-gray-100">
+                <p class="font-bold text-xs text-gray-900">🕒 Churchgate Station</p>
+                <p class="text-[10px] text-gray-500">Maharshi Karve Road, Churchgate, Mumbai</p>
+            </div>
+            <div onclick="selectDestination('Ghatkopar Railway Station')" class="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl cursor-pointer border border-gray-100">
+                <p class="font-bold text-xs text-gray-900">🕒 Ghatkopar Railway Station</p>
+                <p class="text-[10px] text-gray-500">Mumbai, Maharashtra</p>
             </div>
         </div>
     </div>
@@ -125,258 +214,46 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        let map, pickupMarker, dropMarker, routeLine;
-        let busStopMarkers = [];
-        let pickupCoords = null;
-        let dropCoords = null;
-        let shortestKm = 0;
-        let displayKm = 0;
-        let calculatedFare = 0;
-        let searchTimeout = null;
+        let map, selectedVehicleName = 'Bike', selectedPrice = 102;
 
         function initMap() {
-            map = L.map('map').setView([18.922, 72.834], 13);
+            map = L.map('map', { zoomControl: false }).setView([18.922, 72.834], 14);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '© OpenStreetMap'
             }).addTo(map);
-
-            setTimeout(() => { map.invalidateSize(); }, 200);
-
-            map.on('click', function(e) {
-                dropCoords = [e.latlng.lat, e.latlng.lng];
-                setDropPin(dropCoords, "Pinned Destination");
-                if (pickupCoords) fetchRouteProfiles();
-            });
-            
-            getCurrentLocation();
         }
 
-        function toggleSettings() {
-            document.getElementById('settings-drawer').classList.toggle('hidden');
+        function openSearchModal() {
+            document.getElementById('search-modal').classList.remove('hidden');
         }
 
-        function getCurrentLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        pickupCoords = [position.coords.latitude, position.coords.longitude];
-                        setPickupPin(pickupCoords);
-                        document.getElementById('pickup-text').innerText = `GPS Locked`;
-                        map.setView(pickupCoords, 14);
-                        setTimeout(() => { map.invalidateSize(); }, 100);
-                        if (dropCoords) fetchRouteProfiles();
-                    },
-                    (error) => { 
-                        pickupCoords = [18.922, 72.834];
-                        setPickupPin(pickupCoords);
-                        document.getElementById('pickup-text').innerText = `Default Location`;
-                    },
-                    { enableHighAccuracy: true }
-                );
-            }
+        function closeSearchModal() {
+            document.getElementById('search-modal').classList.add('hidden');
         }
 
-        function setPickupPin(coords) {
-            if (pickupMarker) map.removeLayer(pickupMarker);
-            pickupMarker = L.marker(coords, {
-                icon: L.icon({
-                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                    iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
-                })
-            }).addTo(map).bindPopup("<b>Start (Pickup)</b>");
+        function selectDestination(destName) {
+            closeSearchModal();
+            document.getElementById('home-view').classList.add('hidden');
+            document.getElementById('booking-view').classList.remove('hidden');
+            document.getElementById('back-btn').classList.remove('hidden');
         }
 
-        function setDropPin(coords, name) {
-            if (dropMarker) map.removeLayer(dropMarker);
-            dropMarker = L.marker(coords, {
-                icon: L.icon({
-                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                    iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
-                })
-            }).addTo(map).bindPopup(`<b>Destination:</b> ${name}`).openPopup();
-            
-            document.getElementById('drop-text').innerText = name;
-            map.setView(coords, 14);
+        function resetToHome() {
+            document.getElementById('booking-view').classList.add('hidden');
+            document.getElementById('home-view').classList.remove('hidden');
+            document.getElementById('back-btn').classList.add('hidden');
         }
 
-        function searchLocation(query) {
-            clearTimeout(searchTimeout);
-            let listDiv = document.getElementById('suggestions-list');
-            if (query.length < 3) {
-                listDiv.classList.add('hidden');
-                return;
-            }
-            searchTimeout = setTimeout(async () => {
-                let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=in&limit=5`;
-                try {
-                    let response = await fetch(url);
-                    let data = await response.json();
-                    listDiv.innerHTML = '';
-                    if (data.length > 0) {
-                        data.forEach(item => {
-                            let div = document.createElement('div');
-                            div.className = "p-2.5 hover:bg-slate-800 border-b border-slate-800 text-xs text-slate-200 cursor-pointer font-medium flex items-center space-x-2";
-                            div.innerHTML = `<span class="text-amber-400">📍</span> <span class="truncate">${item.display_name}</span>`;
-                            div.onclick = () => {
-                                dropCoords = [parseFloat(item.lat), parseFloat(item.lon)];
-                                document.getElementById('search-input').value = item.display_name;
-                                listDiv.classList.add('hidden');
-                                setDropPin(dropCoords, item.display_name);
-                                if (pickupCoords) fetchRouteProfiles();
-                            };
-                            listDiv.appendChild(div);
-                        });
-                        listDiv.classList.remove('hidden');
-                    } else {
-                        listDiv.classList.add('hidden');
-                    }
-                } catch (e) { console.error(e); }
-            }, 300);
+        function selectVehicle(name, price) {
+            selectedVehicleName = name;
+            selectedPrice = price;
+            document.getElementById('book-action-btn').innerText = `Book ${name} (₹${price})`;
         }
 
-        // Fetch route data from OSRM
-        async function fetchRouteProfiles() {
-            if (!pickupCoords || !dropCoords) return;
-            const url = `https://router.project-osrm.org/route/v1/driving/${pickupCoords[1]},${pickupCoords[0]};${dropCoords[1]},${dropCoords[0]}?overview=full&geometries=geojson`;
-            try {
-                let response = await fetch(url);
-                let data = await response.json();
-                if (data.routes && data.routes.length > 0) {
-                    let route = data.routes[0];
-                    shortestKm = route.distance / 1000;
-                    
-                    // Negotiation buffer (adds ~20% for bargaining)
-                    displayKm = shortestKm * 1.20; 
-
-                    if (routeLine) map.removeLayer(routeLine);
-                    routeLine = L.geoJSON(route.geometry, {
-                        style: { color: '#f59e0b', weight: 6, opacity: 0.9 }
-                    }).addTo(map);
-
-                    let bounds = L.latLngBounds([pickupCoords, dropCoords]);
-                    map.fitBounds(bounds, { padding: [40, 40] });
-
-                    updatePricingDisplay(displayKm);
-                }
-            } catch (err) { console.error(err); }
-        }
-
-        function recalculatePricing() {
-            if (displayKm > 0) {
-                updatePricingDisplay(displayKm);
-            }
-        }
-
-        function updatePricingDisplay(km) {
-            const baseFare = parseFloat(document.getElementById('setting-base').value) || 20;
-            const perKmRate = parseFloat(document.getElementById('setting-per-km').value) || 12;
-            const isNight = document.getElementById('setting-night').checked;
-            const minPrice = 25;
-
-            let total = baseFare;
-            if (km > 2) {
-                total += (km - 2) * perKmRate;
-            }
-            total = Math.max(minPrice, total);
-
-            if (isNight) {
-                total *= 1.25;
-                document.getElementById('night-badge').classList.remove('hidden');
-            } else {
-                document.getElementById('night-badge').classList.add('hidden');
-            }
-
-            calculatedFare = Math.round(total);
-            let durationMins = Math.round((km / 25) * 60);
-
-            let autoEst = Math.round(calculatedFare * 1.5);
-            let cabEst = Math.round(calculatedFare * 2.3);
-
-            document.getElementById('distance-display').innerText = `Negotiation Distance: ${km.toFixed(1)} km`;
-            document.getElementById('eta-display').innerText = `ETA: ~${durationMins} mins`;
-            document.getElementById('price-display').innerText = `₹${calculatedFare}`;
-            document.getElementById('comp-auto').innerText = `₹${autoEst}`;
-            document.getElementById('comp-cab').innerText = `₹${cabEst}`;
-
-            document.getElementById('fare-card').classList.remove('hidden');
-
-            let navBtn = document.getElementById('nav-btn');
-            navBtn.disabled = false;
-            navBtn.className = "w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold py-2.5 rounded-xl transition-all shadow-md cursor-pointer text-xs flex items-center justify-center gap-1.5";
-
-            let billBtn = document.getElementById('bill-btn');
-            billBtn.disabled = false;
-            billBtn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2.5 rounded-xl transition-all shadow-md cursor-pointer text-xs flex items-center justify-center gap-1.5";
-        }
-
-        // Start Navigation: Switches to shortest path and opens Google Maps GPS navigation directly
-        function startNavigation() {
-            if (!dropCoords) return;
-
-            // Switch distance display to shortest route
-            document.getElementById('distance-display').innerText = `Active Shortest Route: ${shortestKm.toFixed(1)} km`;
-            document.getElementById('terminal-status').innerText = "● Trip in Progress";
-            document.getElementById('terminal-status').className = "text-[10px] text-amber-400 font-medium";
-
-            // Swap buttons to show Complete Ride and update Nav button text
-            document.getElementById('nav-btn').innerHTML = "🧭 Open Google Maps GPS (Shortest Route)";
-            document.getElementById('nav-btn').onclick = function() {
-                window.open(`https://www.google.com/maps/dir/?api=1&destination=${dropCoords[0]},${dropCoords[1]}&travelmode=driving`, '_blank');
-            };
-            
-            document.getElementById('complete-btn').classList.remove('hidden');
-
-            // Automatically open Google Maps navigation instantly on click
-            window.open(`https://www.google.com/maps/dir/?api=1&destination=${dropCoords[0]},${dropCoords[1]}&travelmode=driving`, '_blank');
-        }
-
-        // Send WhatsApp Bill
-        function shareWhatsAppBill() {
-            let dropText = document.getElementById('drop-text').innerText;
-            let nightActive = document.getElementById('setting-night').checked ? " (Night Shift)" : "";
-            let message = `🧾 *Bike Taxi Bill*:%0a*Fare:* ₹${calculatedFare}${nightActive}%0a*Distance:* ${displayKm.toFixed(1)} km%0a*Drop:* ${dropText}%0a%0aThank you for riding with us!`;
-            window.location.href = `https://wa.me/?text=${message}`;
-        }
-
-        // Complete Ride & Find Nearest Bus Stops
-        async function completeRide() {
-            document.getElementById('terminal-status').innerText = "● Trip Completed - Finding Bus Stops...";
-            document.getElementById('complete-btn').disabled = true;
-            document.getElementById('complete-btn').innerText = "📍 Locating Nearby Bus Stops...";
-
-            if (dropCoords) {
-                let lat = dropCoords[0];
-                let lon = dropCoords[1];
-                let query = `[out:json];node["highway"="bus_stop"](around:2000,${lat},${lon});out body;`;
-                let url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
-                
-                try {
-                    let response = await fetch(url);
-                    let data = await response.json();
-                    
-                    if (data.elements && data.elements.length > 0) {
-                        data.elements.slice(0, 5).forEach(stop => {
-                            let marker = L.marker([stop.lat, stop.lon], {
-                                icon: L.icon({
-                                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-                                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                                    iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
-                                })
-                            }).addTo(map).bindPopup(`🚌 Bus Stop: ${stop.tags.name || 'Local Stop'}`);
-                            busStopMarkers.push(marker);
-                        });
-                        alert(`Trip completed! Found ${data.elements.length} nearby bus stops around destination.`);
-                    } else {
-                        alert("Trip completed successfully! No major bus stops found within 2km.");
-                    }
-                } catch (e) {
-                    console.error(e);
-                    alert("Trip completed successfully!");
-                }
-            }
+        function confirmBooking() {
+            alert(`Booking confirmed for ${selectedVehicleName} at ₹${selectedPrice}! Searching for nearby driver partners...`);
+            resetToHome();
         }
 
         window.onload = initMap;

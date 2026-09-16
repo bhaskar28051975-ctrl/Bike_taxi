@@ -68,11 +68,11 @@
         <div class="p-4 flex-1 flex flex-col justify-between space-y-3 bg-slate-950">
             <div class="grid grid-cols-2 gap-2">
                 <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
-                    <p class="text-[10px] text-slate-400 font-bold uppercase">Pickup</p>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase">Pickup (Start)</p>
                     <p id="pickup-text" class="text-xs font-semibold text-slate-200 truncate">Acquiring GPS...</p>
                 </div>
                 <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
-                    <p class="text-[10px] text-slate-400 font-bold uppercase">Drop-off</p>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase">Drop-off (Destination)</p>
                     <p id="drop-text" class="text-xs font-semibold text-slate-200 truncate">Select destination</p>
                 </div>
             </div>
@@ -129,7 +129,8 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        let map, pickupMarker, dropMarker, routeLine, busStopMarkers = [];
+        let map, pickupMarker, dropMarker, routeLine;
+        let busStopMarkers = [];
         let pickupCoords = null;
         let dropCoords = null;
         let shortestKm = 0;
@@ -139,17 +140,22 @@
         let searchTimeout = null;
 
         function initMap() {
+            // Initialize map with default center (Mumbai fallback)
             map = L.map('map').setView([18.922, 72.834], 13);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '© OpenStreetMap'
             }).addTo(map);
 
+            // Fix tile rendering glitches on load
+            setTimeout(() => { map.invalidateSize(); }, 200);
+
             map.on('click', function(e) {
                 dropCoords = [e.latlng.lat, e.latlng.lng];
                 setDropPin(dropCoords, "Pinned Destination");
                 if (pickupCoords) fetchRouteProfiles();
             });
+            
             getCurrentLocation();
         }
 
@@ -165,9 +171,15 @@
                         setPickupPin(pickupCoords);
                         document.getElementById('pickup-text').innerText = `GPS Locked`;
                         map.setView(pickupCoords, 14);
+                        setTimeout(() => { map.invalidateSize(); }, 100);
                         if (dropCoords) fetchRouteProfiles();
                     },
-                    (error) => { alert("Please enable GPS permissions."); },
+                    (error) => { 
+                        // Fallback default coordinates if GPS is blocked
+                        pickupCoords = [18.922, 72.834];
+                        setPickupPin(pickupCoords);
+                        document.getElementById('pickup-text').innerText = `Default Location`;
+                    },
                     { enableHighAccuracy: true }
                 );
             }
@@ -175,7 +187,13 @@
 
         function setPickupPin(coords) {
             if (pickupMarker) map.removeLayer(pickupMarker);
-            pickupMarker = L.marker(coords).addTo(map).bindPopup("Driver Pickup");
+            pickupMarker = L.marker(coords, {
+                icon: L.icon({
+                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                    iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+                })
+            }).addTo(map).bindPopup("<b>Start (Pickup)</b>").openPopup();
         }
 
         function setDropPin(coords, name) {
@@ -186,7 +204,7 @@
                     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
                     iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
                 })
-            }).addTo(map).bindPopup(name).openPopup();
+            }).addTo(map).bindPopup(`<b>Destination:</b> ${name}`).openPopup();
             
             document.getElementById('drop-text').innerText = name;
             map.setView(coords, 14);
@@ -227,7 +245,7 @@
             }, 300);
         }
 
-        // Fetch route data: Initially show a higher negotiation distance, keeping shortest path ready for booking
+        // Fetch route data from OSRM
         async function fetchRouteProfiles() {
             if (!pickupCoords || !dropCoords) return;
             const url = `https://router.project-osrm.org/route/v1/driving/${pickupCoords[1]},${pickupCoords[0]};${dropCoords[1]},${dropCoords[0]}?overview=full&geometries=geojson&steps=true`;
@@ -238,7 +256,7 @@
                     let route = data.routes[0];
                     shortestKm = route.distance / 1000;
                     
-                    // Add buffer for negotiation (e.g., ~20% higher so driver has margin to offer discounts during bargaining)
+                    // Negotiation buffer (adds ~20% for rider bargaining margin)
                     displayKm = shortestKm * 1.20; 
 
                     if (route.legs && route.legs[0].steps) {
@@ -249,6 +267,10 @@
                     routeLine = L.geoJSON(route.geometry, {
                         style: { color: '#f59e0b', weight: 6, opacity: 0.9 }
                     }).addTo(map);
+
+                    // Fit map view to show both points and the route line perfectly
+                    let bounds = L.latLngBounds([pickupCoords, dropCoords]);
+                    map.fitBounds(bounds, { padding: [50, 50] });
 
                     updatePricingDisplay(displayKm);
                 }
@@ -283,7 +305,6 @@
             calculatedFare = Math.round(total);
             let durationMins = Math.round((km / 25) * 60);
 
-            // Competitor comparisons
             let autoEst = Math.round(calculatedFare * 1.5);
             let cabEst = Math.round(calculatedFare * 2.3);
 
@@ -295,7 +316,6 @@
 
             document.getElementById('fare-card').classList.remove('hidden');
 
-            // Enable action buttons
             let navBtn = document.getElementById('nav-btn');
             navBtn.disabled = false;
             navBtn.className = "w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold py-2.5 rounded-xl transition-all shadow-md cursor-pointer text-xs flex items-center justify-center gap-1.5";
@@ -305,7 +325,7 @@
             billBtn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2.5 rounded-xl transition-all shadow-md cursor-pointer text-xs flex items-center justify-center gap-1.5";
         }
 
-        // Start Navigation: Switches instantly to shortest path metrics and instructions
+        // Switch to shortest path view and active navigation mode
         function startNavigation() {
             if (!dropCoords) return;
 
@@ -321,7 +341,7 @@
 
             document.getElementById('nav-btn').hidden = true;
             document.getElementById('complete-btn').hidden = false;
-            document.getElementById('terminal-status').innerText = "● Trip in Progress";
+            document.getElementById('terminal-status').innerText = "● Trip in Progress (Shortest Path)";
             document.getElementById('terminal-status').className = "text-[10px] text-amber-400 font-medium";
         }
 
@@ -333,7 +353,7 @@
             window.location.href = `https://wa.me/?text=${message}`;
         }
 
-        // Complete Ride & Fetch Nearest Bus Stops via Overpass API
+        // Complete Ride & Find Nearest Bus Stops
         async function completeRide() {
             document.getElementById('terminal-status').innerText = "● Trip Completed - Finding Bus Stops...";
             document.getElementById('complete-btn').disabled = true;
@@ -362,7 +382,7 @@
                         });
                         alert(`Trip completed! Found ${data.elements.length} nearby bus stops around the destination.`);
                     } else {
-                        alert("Trip completed! No major bus stops found directly within 2km.");
+                        alert("Trip completed successfully! No major bus stops found within 2km.");
                     }
                 } catch (e) {
                     console.error(e);

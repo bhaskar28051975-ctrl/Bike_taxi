@@ -21,8 +21,8 @@
     <!-- Leaflet Map Background -->
     <div id="map"></div>
 
-    <!-- Main Container with bottom padding to prevent mobile browser toolbar overlap -->
-    <div class="app-container h-screen flex flex-col justify-between p-4 pb-16">
+    <!-- Main Container -->
+    <div class="app-container h-screen flex flex-col justify-between p-4 pb-20">
         
         <!-- TOP SEARCH BAR CONTAINER (Rapido Style) -->
         <div class="interactive bg-white rounded-2xl shadow-xl p-4 border border-gray-100 space-y-3">
@@ -67,7 +67,7 @@
                 </button>
             </div>
 
-            <!-- Live Nominatim Suggestions Drawer -->
+            <!-- Suggestions Drawer -->
             <div id="suggestionsList" class="hidden max-h-40 overflow-y-auto divide-y divide-gray-100 border-t border-gray-100 pt-2"></div>
         </div>
 
@@ -88,7 +88,7 @@
         </div>
 
         <!-- BOTTOM CARDS CONTAINER -->
-        <div class="space-y-3 mb-6">
+        <div class="space-y-3 mb-4">
             
             <!-- BOOKING CARD -->
             <div id="bookingCard" class="interactive hidden bg-white rounded-2xl shadow-xl p-4 border border-gray-100 space-y-4">
@@ -113,24 +113,24 @@
                 </div>
             </div>
 
-            <!-- ACTIVE NAVIGATION / IN-TRANSIT CARD -->
-            <div id="activeRideCard" class="interactive hidden bg-black text-white rounded-2xl shadow-2xl p-4 space-y-3">
+            <!-- ACTIVE NAVIGATION / IN-TRANSIT CARD (Always visible during trip) -->
+            <div id="activeRideCard" class="interactive hidden bg-black text-white rounded-2xl shadow-2xl p-4 space-y-3 border-2 border-yellow-400">
                 <div class="flex items-center justify-between">
                     <div>
                         <span class="text-[10px] bg-yellow-400 text-black font-extrabold px-2 py-0.5 rounded uppercase">In Transit</span>
-                        <h4 class="font-bold text-base mt-1">Navigating to Destination</h4>
+                        <h4 class="font-bold text-base mt-1">Trip Live & Meter Running</h4>
                     </div>
                     <div class="text-right">
                         <span class="text-xs text-gray-400">Rate Active</span>
                         <p class="text-sm font-semibold text-yellow-400">₹<span id="activeRateDisp">12</span>/km</p>
                     </div>
                 </div>
-                <div class="flex space-x-2">
-                    <button onclick="openExternalNavigation()" class="flex-1 bg-yellow-400 hover:bg-yellow-500 text-black py-2.5 rounded-xl font-bold text-xs flex items-center justify-center space-x-1 shadow-md">
-                        <span>🗺️ Open Google Maps</span>
+                <div class="flex space-x-2 pt-1">
+                    <button onclick="openExternalNavigation()" class="flex-1 bg-yellow-400 hover:bg-yellow-500 text-black py-3 rounded-xl font-bold text-xs flex items-center justify-center space-x-1 shadow-md">
+                        <span>🗺️ Open Maps GPS</span>
                     </button>
-                    <button onclick="endRide()" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl font-bold text-xs shadow-md">
-                        🏁 End Ride
+                    <button onclick="endRide()" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold text-xs shadow-md flex items-center justify-center">
+                        <span>🏁 End Ride & Bill</span>
                     </button>
                 </div>
             </div>
@@ -200,10 +200,9 @@
         function recenterGPS() {
             initGPS();
             map.setView(currentLatLng, 15);
-            alert("Map centered to your live GPS coordinates.");
         }
 
-        // Live OpenStreetMap Nominatim Search (Works for anywhere in India/World)
+        // Live OpenStreetMap Nominatim Search
         function debounceSearch(query) {
             clearTimeout(searchTimeout);
             if (!query || query.length < 3) {
@@ -220,7 +219,6 @@
                             return;
                         }
                         list.innerHTML = data.map(item => {
-                            // Calculate approximate straight-line distance from current GPS
                             const distVal = calculateDistance(currentLatLng[0], currentLatLng[1], parseFloat(item.lat), parseFloat(item.lon)).toFixed(1);
                             return `
                                 <div onclick="selectDestination('${item.display_name.replace(/'/g, "")}', ${item.lat}, ${item.lon}, '${distVal}')" class="py-2.5 px-2 hover:bg-gray-50 cursor-pointer flex items-center justify-between">
@@ -238,16 +236,17 @@
             }, 400);
         }
 
-        // Haversine formula for distance calculation in KM
+        // Distance Calculation with Road Adjustment Multiplier (~1.25x straight line for actual road routing)
         function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371; // Earth radius in KM
+            const R = 6371; 
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
             const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
                       Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
                       Math.sin(dLon/2) * Math.sin(dLon/2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
+            let straightKm = R * c;
+            return straightKm * 1.25; // Standard road circuity factor
         }
 
         let destinationMarker = null;
@@ -259,7 +258,7 @@
             destinationLatLng = [parseFloat(lat), parseFloat(lon)];
 
             let calculatedPrice = Math.round(baseFare + (parseFloat(dist) * perKmRate));
-            let estTime = Math.max(3, Math.round(parseFloat(dist) * 2.5)); // ~2.5 mins per km
+            let estTime = Math.max(3, Math.round(parseFloat(dist) * 2.5));
 
             document.getElementById('tripDist').innerText = dist;
             document.getElementById('tripTime').innerText = estTime;
@@ -295,6 +294,7 @@
                 alert("Please select a destination first.");
                 return;
             }
+            // Opens Google Maps navigation in target blank safely without breaking PWA state
             const url = `https://www.google.com/maps/dir/?api=1&destination=${destinationLatLng[0]},${destinationLatLng[1]}&travelmode=driving`;
             window.open(url, '_blank');
         }
@@ -328,7 +328,6 @@
             document.getElementById('displayRate').innerText = perKmRate;
             toggleSettings();
             
-            // Re-calculate if destination is already active
             if (destinationLatLng) {
                 const distVal = calculateDistance(currentLatLng[0], currentLatLng[1], destinationLatLng[0], destinationLatLng[1]).toFixed(1);
                 let calculatedPrice = Math.round(baseFare + (parseFloat(distVal) * perKmRate));

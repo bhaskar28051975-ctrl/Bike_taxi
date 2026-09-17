@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BR Bike Taxi App - Meter System</title>
+    <title>BR Bike Taxi App - Live GPS Meter</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS & JS -->
@@ -30,14 +30,14 @@
                 <button onclick="resetApp()" class="p-1 rounded-full hover:bg-gray-100 text-gray-700">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                 </button>
-                <span class="text-xs font-bold uppercase tracking-wider bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full">BR Meter System</span>
+                <span class="text-xs font-bold uppercase tracking-wider bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full">BR GPS Meter System</span>
                 <button onclick="toggleSettings()" class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-lg font-medium">⚙️ Config</button>
             </div>
 
-            <!-- Mode Selector Tabs (Mumbai Auto Style vs Fixed Package) -->
+            <!-- Mode Selector Tabs -->
             <div class="grid grid-cols-2 gap-1 bg-gray-100 p-1 rounded-xl">
                 <button id="tabFixed" onclick="switchMode('fixed')" class="py-1.5 text-xs font-bold rounded-lg bg-white shadow-sm text-gray-900 transition">Fixed Fare</button>
-                <button id="tabMeter" onclick="switchMode('meter')" class="py-1.5 text-xs font-bold rounded-lg text-gray-500 transition">Live Taximeter</button>
+                <button id="tabMeter" onclick="switchMode('meter')" class="py-1.5 text-xs font-bold rounded-lg text-gray-500 transition">Live GPS Meter</button>
             </div>
 
             <!-- Route Inputs -->
@@ -57,7 +57,7 @@
 
                     <!-- Destination Input -->
                     <div class="bg-white rounded-xl px-3 py-2 border-2 border-yellow-400 flex items-center shadow-sm">
-                        <input id="destInput" type="text" placeholder="Where to go? (Type any destination...)" oninput="debounceSearch(this.value)" class="bg-transparent text-sm w-full outline-none text-gray-900 font-semibold">
+                        <input id="destInput" type="text" placeholder="Where to go? (Type destination...)" oninput="debounceSearch(this.value)" class="bg-transparent text-sm w-full outline-none text-gray-900 font-semibold">
                         <button onclick="clearDestination()" class="text-gray-400 hover:text-gray-600 px-1">✕</button>
                     </div>
                 </div>
@@ -119,42 +119,42 @@
                 </div>
             </div>
 
-            <!-- LIVE TAXIMETER START CARD -->
+            <!-- LIVE GPS TAXIMETER START CARD -->
             <div id="meterStartCard" class="interactive hidden bg-white rounded-2xl shadow-xl p-4 border border-gray-100 space-y-4">
                 <div class="flex items-center justify-between border-b pb-3">
                     <div class="flex items-center space-x-3">
                         <div class="bg-black text-yellow-400 p-2.5 rounded-xl text-xl font-mono">⚡</div>
                         <div>
-                            <h4 class="font-bold text-gray-900 text-sm">Digital Taximeter</h4>
+                            <h4 class="font-bold text-gray-900 text-sm">GPS Live Taximeter</h4>
                             <p class="text-xs text-gray-500">Base Drop: ₹<span id="dispBase">30</span> | Rate: ₹<span id="dispRate">12</span>/km</p>
                         </div>
                     </div>
                     <div class="text-right">
-                        <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded font-bold">Meter Ready</span>
+                        <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded font-bold">GPS Ready</span>
                     </div>
                 </div>
 
                 <div class="flex space-x-2">
                     <button onclick="startLiveMeterRide()" class="w-full bg-yellow-400 text-black py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-yellow-500 transition flex items-center justify-center space-x-2">
-                        <span>🟢 Drop Flag & Start Meter</span>
+                        <span>🟢 Drop Flag & Start GPS Meter</span>
                     </button>
                 </div>
             </div>
 
-            <!-- ACTIVE RIDE / RUNNING METER CARD -->
+            <!-- ACTIVE RIDE / RUNNING GPS METER CARD -->
             <div id="activeRideCard" class="interactive hidden bg-black text-white rounded-2xl shadow-2xl p-4 space-y-3 border-2 border-yellow-400">
                 <div class="flex items-center justify-between">
                     <div>
-                        <span id="activeModeBadge" class="text-[10px] bg-yellow-400 text-black font-extrabold px-2 py-0.5 rounded uppercase">Meter Running</span>
-                        <h4 class="font-bold text-base mt-1">Trip in Progress</h4>
+                        <span id="activeModeBadge" class="text-[10px] bg-yellow-400 text-black font-extrabold px-2 py-0.5 rounded uppercase">GPS Meter Running</span>
+                        <h4 class="font-bold text-base mt-1">Moving & Tracking...</h4>
                     </div>
                     <div class="text-right">
                         <span class="text-xs text-gray-400">Current Fare</span>
-                        <p class="text-xl font-black text-yellow-400">₹<span id="runningPrice">0</span></p>
+                        <p class="text-xl font-black text-yellow-400">₹<span id="runningPrice">30</span></p>
                     </div>
                 </div>
                 <div class="flex justify-between text-xs text-gray-300 border-t border-gray-800 pt-2">
-                    <span>Distance: <b id="runningDist" class="text-white">0.0 km</b></span>
+                    <span>Moved Distance: <b id="runningDist" class="text-white">0.0 km</b></span>
                     <span>Elapsed: <b id="runningTime" class="text-white">0m 0s</b></span>
                 </div>
                 <div class="flex space-x-2 pt-1">
@@ -178,7 +178,7 @@
             <p class="text-xs text-gray-500">Taximeter summary & receipt.</p>
             
             <div class="bg-gray-50 rounded-2xl p-4 text-left space-y-2 border border-gray-100 text-sm">
-                <div class="flex justify-between"><span>Total Distance:</span> <span id="billDist" class="font-bold">0 km</span></div>
+                <div class="flex justify-between"><span>Total GPS Distance:</span> <span id="billDist" class="font-bold">0 km</span></div>
                 <div class="flex justify-between"><span>Trip Duration:</span> <span id="billDuration" class="font-bold">0 mins</span></div>
                 <div class="flex justify-between"><span>Fare Breakdown:</span> <span id="billFare" class="font-bold">₹0</span></div>
                 <div class="border-t pt-2 flex justify-between text-base font-black text-gray-900"><span>Final Payable:</span> <span id="billTotal" class="text-green-600">₹0</span></div>
@@ -199,17 +199,20 @@
     <script>
         let baseFare = 30;
         let perKmRate = 12;
-        let currentMode = 'fixed'; // 'fixed' or 'meter'
+        let currentMode = 'fixed';
         let currentLatLng = [19.0760, 72.8777];
         let destinationLatLng = null;
         let routeLayer = null;
         let selectedDestName = "Custom Location";
         let searchTimeout = null;
 
-        // Live Meter State Variables
-        let meterInterval = null;
+        // Live Meter State
+        let watchId = null;
+        let timerInterval = null;
         let startTime = null;
-        let simulatedDistKm = 0.0;
+        let tripDistanceKm = 0.0;
+        let lastLat = null;
+        let lastLon = null;
 
         // Initialize Map
         const map = L.map('map', { zoomControl: false }).setView(currentLatLng, 13);
@@ -224,7 +227,7 @@
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(position => {
                     currentLatLng = [position.coords.latitude, position.coords.longitude];
-                    map.setView(currentLatLng, 15);
+                    map.setView(currentLatLng, 16);
                     pickupMarker.setLatLng(currentLatLng);
                     document.getElementById('pickupInput').value = "Your Live GPS Location";
                 }, error => {
@@ -237,7 +240,7 @@
 
         function recenterGPS() {
             initGPS();
-            map.setView(currentLatLng, 15);
+            map.setView(currentLatLng, 16);
         }
 
         function switchMode(mode) {
@@ -274,7 +277,7 @@
                             return;
                         }
                         list.innerHTML = data.map(item => {
-                            const distVal = calculateDistance(currentLatLng[0], currentLatLng[1], parseFloat(item.lat), parseFloat(item.lon)).toFixed(1);
+                            const distVal = calculateHaversine(currentLatLng[0], currentLatLng[1], parseFloat(item.lat), parseFloat(item.lon)).toFixed(1);
                             return `
                                 <div onclick="selectDestination('${item.display_name.replace(/'/g, "")}', ${item.lat}, ${item.lon}, '${distVal}')" class="py-2.5 px-2 hover:bg-gray-50 cursor-pointer flex items-center justify-between">
                                     <div class="pr-2 truncate">
@@ -291,7 +294,7 @@
             }, 400);
         }
 
-        function calculateDistance(lat1, lon1, lat2, lon2) {
+        function calculateHaversine(lat1, lon1, lat2, lon2) {
             const R = 6371; 
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -347,42 +350,70 @@
             document.getElementById('activeRideCard').classList.remove('hidden');
             document.getElementById('activeModeBadge').innerText = "Fixed Fare Trip";
             
-            simulatedDistKm = parseFloat(document.getElementById('tripDist').innerText) || 2.0;
+            tripDistanceKm = parseFloat(document.getElementById('tripDist').innerText) || 2.0;
             document.getElementById('runningPrice').innerText = document.getElementById('tripPrice').innerText;
-            document.getElementById('runningDist').innerText = simulatedDistKm + " km";
+            document.getElementById('runningDist').innerText = tripDistanceKm.toFixed(1) + " km";
             
             startTime = Date.now();
-            startMeterClock();
+            startTimerClock();
         }
 
         function startLiveMeterRide() {
             document.getElementById('meterStartCard').classList.add('hidden');
             document.getElementById('bookingCard').classList.add('hidden');
             document.getElementById('activeRideCard').classList.remove('hidden');
-            document.getElementById('activeModeBadge').innerText = "Live Taximeter Running";
+            document.getElementById('activeModeBadge').innerText = "GPS Live Taximeter";
 
-            simulatedDistKm = 0.0;
+            tripDistanceKm = 0.0;
+            lastLat = null;
+            lastLon = null;
             startTime = Date.now();
-            startMeterClock();
+            startTimerClock();
+            startGPSDistanceTracking();
         }
 
-        function startMeterClock() {
-            if (meterInterval) clearInterval(meterInterval);
-            
-            meterInterval = setInterval(() => {
+        function startTimerClock() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
                 const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
                 const mins = Math.floor(elapsedSeconds / 60);
                 const secs = elapsedSeconds % 60;
                 document.getElementById('runningTime').innerText = `${mins}m ${secs}s`;
-
-                // If in live meter mode, increment distance/fare smoothly every second simulating movement
-                if (currentMode === 'meter') {
-                    simulatedDistKm += 0.05; // increments ~180m per minute
-                    let currentRunningFare = Math.round(baseFare + (simulatedDistKm * perKmRate));
-                    document.getElementById('runningPrice').innerText = currentRunningFare;
-                    document.getElementById('runningDist').innerText = simulatedDistKm.toFixed(1) + " km";
-                }
             }, 1000);
+        }
+
+        // True GPS Movement Tracker using watchPosition
+        function startGPSDistanceTracking() {
+            if (navigator.geolocation) {
+                watchId = navigator.geolocation.watchPosition(position => {
+                    const newLat = position.coords.latitude;
+                    const newLon = position.coords.longitude;
+                    
+                    currentLatLng = [newLat, newLon];
+                    map.setView(currentLatLng, 16);
+                    pickupMarker.setLatLng(currentLatLng);
+
+                    if (lastLat !== null && lastLon !== null) {
+                        // Calculate actual distance moved between last GPS point and new GPS point
+                        let segmentDist = calculateHaversine(lastLat, lastLon, newLat, newLon);
+                        // Filter out tiny GPS jitters (< 3 meters)
+                        if (segmentDist > 0.003) { 
+                            tripDistanceKm += segmentDist;
+                            lastLat = newLat;
+                            lastLon = newLon;
+
+                            let currentRunningFare = Math.round(baseFare + (tripDistanceKm * perKmRate));
+                            document.getElementById('runningPrice').innerText = currentRunningFare;
+                            document.getElementById('runningDist').innerText = tripDistanceKm.toFixed(2) + " km";
+                        }
+                    } else {
+                        lastLat = newLat;
+                        lastLon = newLon;
+                    }
+                }, error => {
+                    console.warn("WatchPosition error:", error);
+                }, { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 });
+            }
         }
 
         function openExternalNavigation() {
@@ -390,15 +421,17 @@
                 alert("Please select a destination first.");
                 return;
             }
-            const url = `https://www.google.com/maps/dir/?api=1&destination=${destinationLatLng[0]}&travelmode=driving`;
+            const url = `https://www.google.com/maps/dir/?api=1&destination=${destinationLatLng[0]},${destinationLatLng[1]}&travelmode=driving`;
             window.open(url, '_blank');
         }
 
         function endRide() {
-            if (meterInterval) clearInterval(meterInterval);
+            if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+            if (timerInterval) clearInterval(timerInterval);
+            
             document.getElementById('activeRideCard').classList.add('hidden');
             
-            const finalDist = simulatedDistKm.toFixed(1);
+            const finalDist = tripDistanceKm.toFixed(2);
             const finalPrice = document.getElementById('runningPrice').innerText;
             const finalDuration = document.getElementById('runningTime').innerText;
 
@@ -413,7 +446,7 @@
         function shareWhatsApp() {
             const dist = document.getElementById('billDist').innerText;
             const total = document.getElementById('billTotal').innerText;
-            const text = encodeURIComponent(`*BR Meter Taxi Receipt* 🛺\nDestination: ${selectedDestName}\nDistance: ${dist}\nTotal Fare: ${total}\nThank you!`);
+            const text = encodeURIComponent(`*BR Meter Taxi Receipt* 🛺\nDistance Covered: ${dist}\nTotal Fare: ${total}\nThank you!`);
             window.open(`https://wa.me/?text=${text}`, '_blank');
         }
 
@@ -427,19 +460,14 @@
             document.getElementById('dispBase').innerText = baseFare;
             document.getElementById('dispRate').innerText = perKmRate;
             toggleSettings();
-            
-            if (destinationLatLng && currentMode === 'fixed') {
-                const distVal = calculateDistance(currentLatLng[0], currentLatLng[1], destinationLatLng[0], destinationLatLng[1]).toFixed(1);
-                let calculatedPrice = Math.round(baseFare + (parseFloat(distVal) * perKmRate));
-                document.getElementById('tripPrice').innerText = calculatedPrice;
-            }
         }
 
         function resetApp() {
-            if (meterInterval) clearInterval(meterInterval);
+            if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+            if (timerInterval) clearInterval(timerInterval);
             clearDestination();
             document.getElementById('billModal').classList.add('hidden');
-            map.setView(currentLatLng, 14);
+            map.setView(currentLatLng, 16);
             switchMode('fixed');
         }
     </script>

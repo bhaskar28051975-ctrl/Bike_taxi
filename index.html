@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BR Bike Taxi App</title>
+    <title>BR Bike Taxi App - Meter System</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS & JS -->
@@ -24,14 +24,20 @@
     <!-- Main Container -->
     <div class="app-container h-screen flex flex-col justify-between p-4 pb-20">
         
-        <!-- TOP SEARCH BAR CONTAINER (Rapido Style) -->
+        <!-- TOP SEARCH BAR CONTAINER -->
         <div class="interactive bg-white rounded-2xl shadow-xl p-4 border border-gray-100 space-y-3">
             <div class="flex items-center justify-between">
                 <button onclick="resetApp()" class="p-1 rounded-full hover:bg-gray-100 text-gray-700">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                 </button>
-                <span class="text-xs font-bold uppercase tracking-wider bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full">BR Bike Taxi App</span>
-                <button onclick="toggleSettings()" class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-lg font-medium">⚙️ Rate: ₹<span id="displayRate">12</span>/km</button>
+                <span class="text-xs font-bold uppercase tracking-wider bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full">BR Meter System</span>
+                <button onclick="toggleSettings()" class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-lg font-medium">⚙️ Config</button>
+            </div>
+
+            <!-- Mode Selector Tabs (Mumbai Auto Style vs Fixed Package) -->
+            <div class="grid grid-cols-2 gap-1 bg-gray-100 p-1 rounded-xl">
+                <button id="tabFixed" onclick="switchMode('fixed')" class="py-1.5 text-xs font-bold rounded-lg bg-white shadow-sm text-gray-900 transition">Fixed Fare</button>
+                <button id="tabMeter" onclick="switchMode('meter')" class="py-1.5 text-xs font-bold rounded-lg text-gray-500 transition">Live Taximeter</button>
             </div>
 
             <!-- Route Inputs -->
@@ -51,7 +57,7 @@
 
                     <!-- Destination Input -->
                     <div class="bg-white rounded-xl px-3 py-2 border-2 border-yellow-400 flex items-center shadow-sm">
-                        <input id="destInput" type="text" placeholder="Where do you want to go? (Type any place...)" oninput="debounceSearch(this.value)" class="bg-transparent text-sm w-full outline-none text-gray-900 font-semibold">
+                        <input id="destInput" type="text" placeholder="Where to go? (Type any destination...)" oninput="debounceSearch(this.value)" class="bg-transparent text-sm w-full outline-none text-gray-900 font-semibold">
                         <button onclick="clearDestination()" class="text-gray-400 hover:text-gray-600 px-1">✕</button>
                     </div>
                 </div>
@@ -62,7 +68,7 @@
                 <button onclick="recenterGPS()" class="flex-1 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 flex items-center justify-center space-x-1 hover:bg-gray-100">
                     <span>📍 Refresh GPS</span>
                 </button>
-                <button onclick="alert('Voice search activated. Speak destination.')" class="flex-1 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 flex items-center justify-center space-x-1 hover:bg-gray-100">
+                <button onclick="alert('Voice search activated.')" class="flex-1 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 flex items-center justify-center space-x-1 hover:bg-gray-100">
                     <span>🎤 Voice Search</span>
                 </button>
             </div>
@@ -74,9 +80,9 @@
         <!-- SETTINGS MODAL -->
         <div id="settingsModal" class="hidden interactive fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
-                <h3 class="font-bold text-lg text-gray-800">Fare Configuration</h3>
+                <h3 class="font-bold text-lg text-gray-800">Meter Configuration</h3>
                 <div>
-                    <label class="text-xs text-gray-500 font-medium">Base Fare (₹)</label>
+                    <label class="text-xs text-gray-500 font-medium">Base Fare / Flag Down (₹)</label>
                     <input id="baseFareInput" type="number" value="30" class="w-full mt-1 p-2 border rounded-xl font-semibold">
                 </div>
                 <div>
@@ -90,47 +96,73 @@
         <!-- BOTTOM CARDS CONTAINER -->
         <div class="space-y-3 mb-4">
             
-            <!-- BOOKING CARD -->
+            <!-- FIXED MODE BOOKING CARD -->
             <div id="bookingCard" class="interactive hidden bg-white rounded-2xl shadow-xl p-4 border border-gray-100 space-y-4">
                 <div class="flex items-center justify-between border-b pb-3">
                     <div class="flex items-center space-x-3">
                         <div class="bg-yellow-400 p-2.5 rounded-xl text-xl">🛵</div>
                         <div>
-                            <h4 class="font-bold text-gray-900 text-sm">BR Bike Taxi</h4>
+                            <h4 class="font-bold text-gray-900 text-sm">Fixed Fare Booking</h4>
                             <p class="text-xs text-gray-500"><span id="tripDist">0</span> km • Est. <span id="tripTime">0</span> mins</p>
                         </div>
                     </div>
                     <div class="text-right">
                         <span class="text-lg font-black text-gray-900">₹<span id="tripPrice">0</span></span>
-                        <p class="text-[10px] text-green-600 font-semibold uppercase">Inclusive of all taxes</p>
+                        <p class="text-[10px] text-green-600 font-semibold uppercase">Fixed Package</p>
                     </div>
                 </div>
 
                 <div class="flex space-x-2">
-                    <button onclick="startRide()" class="w-full bg-black text-yellow-400 py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-gray-900 transition flex items-center justify-center space-x-2">
-                        <span>🚀 Start Booking / Ride</span>
+                    <button onclick="startFixedRide()" class="w-full bg-black text-yellow-400 py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-gray-900 transition flex items-center justify-center space-x-2">
+                        <span>🚀 Start Fixed Ride</span>
                     </button>
                 </div>
             </div>
 
-            <!-- ACTIVE NAVIGATION / IN-TRANSIT CARD (Always visible during trip) -->
+            <!-- LIVE TAXIMETER START CARD -->
+            <div id="meterStartCard" class="interactive hidden bg-white rounded-2xl shadow-xl p-4 border border-gray-100 space-y-4">
+                <div class="flex items-center justify-between border-b pb-3">
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-black text-yellow-400 p-2.5 rounded-xl text-xl font-mono">⚡</div>
+                        <div>
+                            <h4 class="font-bold text-gray-900 text-sm">Digital Taximeter</h4>
+                            <p class="text-xs text-gray-500">Base Drop: ₹<span id="dispBase">30</span> | Rate: ₹<span id="dispRate">12</span>/km</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded font-bold">Meter Ready</span>
+                    </div>
+                </div>
+
+                <div class="flex space-x-2">
+                    <button onclick="startLiveMeterRide()" class="w-full bg-yellow-400 text-black py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-yellow-500 transition flex items-center justify-center space-x-2">
+                        <span>🟢 Drop Flag & Start Meter</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ACTIVE RIDE / RUNNING METER CARD -->
             <div id="activeRideCard" class="interactive hidden bg-black text-white rounded-2xl shadow-2xl p-4 space-y-3 border-2 border-yellow-400">
                 <div class="flex items-center justify-between">
                     <div>
-                        <span class="text-[10px] bg-yellow-400 text-black font-extrabold px-2 py-0.5 rounded uppercase">In Transit</span>
-                        <h4 class="font-bold text-base mt-1">Trip Live & Meter Running</h4>
+                        <span id="activeModeBadge" class="text-[10px] bg-yellow-400 text-black font-extrabold px-2 py-0.5 rounded uppercase">Meter Running</span>
+                        <h4 class="font-bold text-base mt-1">Trip in Progress</h4>
                     </div>
                     <div class="text-right">
-                        <span class="text-xs text-gray-400">Rate Active</span>
-                        <p class="text-sm font-semibold text-yellow-400">₹<span id="activeRateDisp">12</span>/km</p>
+                        <span class="text-xs text-gray-400">Current Fare</span>
+                        <p class="text-xl font-black text-yellow-400">₹<span id="runningPrice">0</span></p>
                     </div>
                 </div>
+                <div class="flex justify-between text-xs text-gray-300 border-t border-gray-800 pt-2">
+                    <span>Distance: <b id="runningDist" class="text-white">0.0 km</b></span>
+                    <span>Elapsed: <b id="runningTime" class="text-white">0m 0s</b></span>
+                </div>
                 <div class="flex space-x-2 pt-1">
-                    <button onclick="openExternalNavigation()" class="flex-1 bg-yellow-400 hover:bg-yellow-500 text-black py-3 rounded-xl font-bold text-xs flex items-center justify-center space-x-1 shadow-md">
+                    <button onclick="openExternalNavigation()" class="flex-1 bg-yellow-400 hover:bg-yellow-500 text-black py-2.5 rounded-xl font-bold text-xs flex items-center justify-center space-x-1 shadow-md">
                         <span>🗺️ Open Maps GPS</span>
                     </button>
-                    <button onclick="endRide()" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold text-xs shadow-md flex items-center justify-center">
-                        <span>🏁 End Ride & Bill</span>
+                    <button onclick="endRide()" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl font-bold text-xs shadow-md flex items-center justify-center">
+                        <span>🏁 Stop Meter & Bill</span>
                     </button>
                 </div>
             </div>
@@ -143,11 +175,12 @@
         <div class="bg-white rounded-3xl w-full max-w-sm p-6 space-y-4 shadow-2xl text-center">
             <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto text-3xl font-bold">✓</div>
             <h3 class="text-xl font-black text-gray-900">Trip Completed!</h3>
-            <p class="text-xs text-gray-500">Thank you for riding with BR Bike Taxi App.</p>
+            <p class="text-xs text-gray-500">Taximeter summary & receipt.</p>
             
             <div class="bg-gray-50 rounded-2xl p-4 text-left space-y-2 border border-gray-100 text-sm">
                 <div class="flex justify-between"><span>Total Distance:</span> <span id="billDist" class="font-bold">0 km</span></div>
-                <div class="flex justify-between"><span>Base + Distance Fare:</span> <span id="billFare" class="font-bold">₹0</span></div>
+                <div class="flex justify-between"><span>Trip Duration:</span> <span id="billDuration" class="font-bold">0 mins</span></div>
+                <div class="flex justify-between"><span>Fare Breakdown:</span> <span id="billFare" class="font-bold">₹0</span></div>
                 <div class="border-t pt-2 flex justify-between text-base font-black text-gray-900"><span>Final Payable:</span> <span id="billTotal" class="text-green-600">₹0</span></div>
             </div>
 
@@ -166,13 +199,19 @@
     <script>
         let baseFare = 30;
         let perKmRate = 12;
-        let currentLatLng = [19.0760, 72.8777]; // Fallback center
+        let currentMode = 'fixed'; // 'fixed' or 'meter'
+        let currentLatLng = [19.0760, 72.8777];
         let destinationLatLng = null;
         let routeLayer = null;
-        let selectedDestName = "";
+        let selectedDestName = "Custom Location";
         let searchTimeout = null;
 
-        // Initialize Leaflet Map
+        // Live Meter State Variables
+        let meterInterval = null;
+        let startTime = null;
+        let simulatedDistKm = 0.0;
+
+        // Initialize Map
         const map = L.map('map', { zoomControl: false }).setView(currentLatLng, 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
@@ -181,7 +220,6 @@
 
         let pickupMarker = L.marker(currentLatLng).addTo(map).bindPopup("<b>Pickup Point (GPS)</b>");
 
-        // Real Live Geolocation
         function initGPS() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(position => {
@@ -202,7 +240,24 @@
             map.setView(currentLatLng, 15);
         }
 
-        // Live OpenStreetMap Nominatim Search
+        function switchMode(mode) {
+            currentMode = mode;
+            const tabFixed = document.getElementById('tabFixed');
+            const tabMeter = document.getElementById('tabMeter');
+            
+            if (mode === 'fixed') {
+                tabFixed.className = "py-1.5 text-xs font-bold rounded-lg bg-white shadow-sm text-gray-900 transition";
+                tabMeter.className = "py-1.5 text-xs font-bold rounded-lg text-gray-500 transition";
+                if (destinationLatLng) document.getElementById('bookingCard').classList.remove('hidden');
+                document.getElementById('meterStartCard').classList.add('hidden');
+            } else {
+                tabMeter.className = "py-1.5 text-xs font-bold rounded-lg bg-white shadow-sm text-gray-900 transition";
+                tabFixed.className = "py-1.5 text-xs font-bold rounded-lg text-gray-500 transition";
+                document.getElementById('bookingCard').classList.add('hidden');
+                document.getElementById('meterStartCard').classList.remove('hidden');
+            }
+        }
+
         function debounceSearch(query) {
             clearTimeout(searchTimeout);
             if (!query || query.length < 3) {
@@ -236,7 +291,6 @@
             }, 400);
         }
 
-        // Distance Calculation with Road Adjustment Multiplier (~1.25x straight line for actual road routing)
         function calculateDistance(lat1, lon1, lat2, lon2) {
             const R = 6371; 
             const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -245,8 +299,7 @@
                       Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
                       Math.sin(dLon/2) * Math.sin(dLon/2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            let straightKm = R * c;
-            return straightKm * 1.25; // Standard road circuity factor
+            return (R * c) * 1.25; // Road factor
         }
 
         let destinationMarker = null;
@@ -271,22 +324,65 @@
             routeLayer = L.polyline([currentLatLng, destinationLatLng], { color: '#000', weight: 4, dashArray: '5, 5' }).addTo(map);
             map.fitBounds(routeLayer.getBounds(), { padding: [50, 50] });
 
-            document.getElementById('bookingCard').classList.remove('hidden');
+            if (currentMode === 'fixed') {
+                document.getElementById('bookingCard').classList.remove('hidden');
+            } else {
+                document.getElementById('meterStartCard').classList.remove('hidden');
+            }
         }
 
         function clearDestination() {
             document.getElementById('destInput').value = '';
             document.getElementById('suggestionsList').classList.add('hidden');
             document.getElementById('bookingCard').classList.add('hidden');
+            document.getElementById('meterStartCard').classList.add('hidden');
             document.getElementById('activeRideCard').classList.add('hidden');
             if (routeLayer) map.removeLayer(routeLayer);
             if (destinationMarker) map.removeLayer(destinationMarker);
         }
 
-        function startRide() {
+        function startFixedRide() {
+            document.getElementById('bookingCard').classList.add('hidden');
+            document.getElementById('meterStartCard').classList.add('hidden');
+            document.getElementById('activeRideCard').classList.remove('hidden');
+            document.getElementById('activeModeBadge').innerText = "Fixed Fare Trip";
+            
+            simulatedDistKm = parseFloat(document.getElementById('tripDist').innerText) || 2.0;
+            document.getElementById('runningPrice').innerText = document.getElementById('tripPrice').innerText;
+            document.getElementById('runningDist').innerText = simulatedDistKm + " km";
+            
+            startTime = Date.now();
+            startMeterClock();
+        }
+
+        function startLiveMeterRide() {
+            document.getElementById('meterStartCard').classList.add('hidden');
             document.getElementById('bookingCard').classList.add('hidden');
             document.getElementById('activeRideCard').classList.remove('hidden');
-            document.getElementById('activeRateDisp').innerText = perKmRate;
+            document.getElementById('activeModeBadge').innerText = "Live Taximeter Running";
+
+            simulatedDistKm = 0.0;
+            startTime = Date.now();
+            startMeterClock();
+        }
+
+        function startMeterClock() {
+            if (meterInterval) clearInterval(meterInterval);
+            
+            meterInterval = setInterval(() => {
+                const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+                const mins = Math.floor(elapsedSeconds / 60);
+                const secs = elapsedSeconds % 60;
+                document.getElementById('runningTime').innerText = `${mins}m ${secs}s`;
+
+                // If in live meter mode, increment distance/fare smoothly every second simulating movement
+                if (currentMode === 'meter') {
+                    simulatedDistKm += 0.05; // increments ~180m per minute
+                    let currentRunningFare = Math.round(baseFare + (simulatedDistKm * perKmRate));
+                    document.getElementById('runningPrice').innerText = currentRunningFare;
+                    document.getElementById('runningDist').innerText = simulatedDistKm.toFixed(1) + " km";
+                }
+            }, 1000);
         }
 
         function openExternalNavigation() {
@@ -294,27 +390,30 @@
                 alert("Please select a destination first.");
                 return;
             }
-            // Opens Google Maps navigation in target blank safely without breaking PWA state
-            const url = `https://www.google.com/maps/dir/?api=1&destination=${destinationLatLng[0]},${destinationLatLng[1]}&travelmode=driving`;
+            const url = `https://www.google.com/maps/dir/?api=1&destination=${destinationLatLng[0]}&travelmode=driving`;
             window.open(url, '_blank');
         }
 
         function endRide() {
+            if (meterInterval) clearInterval(meterInterval);
             document.getElementById('activeRideCard').classList.add('hidden');
             
-            const dist = document.getElementById('tripDist').innerText;
-            const price = document.getElementById('tripPrice').innerText;
-            document.getElementById('billDist').innerText = dist + " km";
-            document.getElementById('billFare').innerText = "₹" + price;
-            document.getElementById('billTotal').innerText = "₹" + price;
+            const finalDist = simulatedDistKm.toFixed(1);
+            const finalPrice = document.getElementById('runningPrice').innerText;
+            const finalDuration = document.getElementById('runningTime').innerText;
+
+            document.getElementById('billDist').innerText = finalDist + " km";
+            document.getElementById('billDuration').innerText = finalDuration;
+            document.getElementById('billFare').innerText = `Base ₹${baseFare} + ₹${perKmRate}/km`;
+            document.getElementById('billTotal').innerText = "₹" + finalPrice;
 
             document.getElementById('billModal').classList.remove('hidden');
         }
 
         function shareWhatsApp() {
-            const dist = document.getElementById('tripDist').innerText;
+            const dist = document.getElementById('billDist').innerText;
             const total = document.getElementById('billTotal').innerText;
-            const text = encodeURIComponent(`*BR Bike Taxi Receipt* 🛵\nDestination: ${selectedDestName}\nDistance: ${dist} km\nTotal Fare: ${total}\nThank you for riding with us!`);
+            const text = encodeURIComponent(`*BR Meter Taxi Receipt* 🛺\nDestination: ${selectedDestName}\nDistance: ${dist}\nTotal Fare: ${total}\nThank you!`);
             window.open(`https://wa.me/?text=${text}`, '_blank');
         }
 
@@ -325,10 +424,11 @@
         function saveSettings() {
             baseFare = parseFloat(document.getElementById('baseFareInput').value) || 30;
             perKmRate = parseFloat(document.getElementById('perKmInput').value) || 12;
-            document.getElementById('displayRate').innerText = perKmRate;
+            document.getElementById('dispBase').innerText = baseFare;
+            document.getElementById('dispRate').innerText = perKmRate;
             toggleSettings();
             
-            if (destinationLatLng) {
+            if (destinationLatLng && currentMode === 'fixed') {
                 const distVal = calculateDistance(currentLatLng[0], currentLatLng[1], destinationLatLng[0], destinationLatLng[1]).toFixed(1);
                 let calculatedPrice = Math.round(baseFare + (parseFloat(distVal) * perKmRate));
                 document.getElementById('tripPrice').innerText = calculatedPrice;
@@ -336,9 +436,11 @@
         }
 
         function resetApp() {
+            if (meterInterval) clearInterval(meterInterval);
             clearDestination();
             document.getElementById('billModal').classList.add('hidden');
             map.setView(currentLatLng, 14);
+            switchMode('fixed');
         }
     </script>
 </body>

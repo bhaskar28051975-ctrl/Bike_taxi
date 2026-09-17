@@ -21,7 +21,8 @@
     <!-- Leaflet Map Background -->
     <div id="map"></div>
 
-    <div class="app-container h-screen flex flex-col justify-between p-4">
+    <!-- Main Container with bottom padding to prevent mobile browser toolbar overlap -->
+    <div class="app-container h-screen flex flex-col justify-between p-4 pb-16">
         
         <!-- TOP SEARCH BAR CONTAINER (Rapido Style) -->
         <div class="interactive bg-white rounded-2xl shadow-xl p-4 border border-gray-100 space-y-3">
@@ -44,13 +45,13 @@
                 <div class="flex-1 space-y-2">
                     <!-- Pickup Input -->
                     <div class="bg-gray-50 rounded-xl px-3 py-2 border border-gray-200 flex items-center justify-between">
-                        <input id="pickupInput" type="text" value="Detecting live location..." class="bg-transparent text-sm w-full outline-none text-gray-800 font-medium" readonly>
+                        <input id="pickupInput" type="text" value="Acquiring GPS location..." class="bg-transparent text-sm w-full outline-none text-gray-800 font-medium" readonly>
                         <span class="text-xs text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded">Live</span>
                     </div>
 
                     <!-- Destination Input -->
                     <div class="bg-white rounded-xl px-3 py-2 border-2 border-yellow-400 flex items-center shadow-sm">
-                        <input id="destInput" type="text" placeholder="Where do you want to go? (e.g. Dadar)" oninput="searchDestinations(this.value)" class="bg-transparent text-sm w-full outline-none text-gray-900 font-semibold">
+                        <input id="destInput" type="text" placeholder="Where do you want to go? (Type any place...)" oninput="debounceSearch(this.value)" class="bg-transparent text-sm w-full outline-none text-gray-900 font-semibold">
                         <button onclick="clearDestination()" class="text-gray-400 hover:text-gray-600 px-1">✕</button>
                     </div>
                 </div>
@@ -58,15 +59,15 @@
 
             <!-- Action buttons -->
             <div class="flex space-x-2 pt-1">
-                <button onclick="useCurrentLocationAsPickup()" class="flex-1 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 flex items-center justify-center space-x-1 hover:bg-gray-100">
-                    <span>📍 Pin on Map</span>
+                <button onclick="recenterGPS()" class="flex-1 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 flex items-center justify-center space-x-1 hover:bg-gray-100">
+                    <span>📍 Refresh GPS</span>
                 </button>
                 <button onclick="alert('Voice search activated. Speak destination.')" class="flex-1 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 flex items-center justify-center space-x-1 hover:bg-gray-100">
                     <span>🎤 Voice Search</span>
                 </button>
             </div>
 
-            <!-- Destination Autocomplete Suggestions Drawer -->
+            <!-- Live Nominatim Suggestions Drawer -->
             <div id="suggestionsList" class="hidden max-h-40 overflow-y-auto divide-y divide-gray-100 border-t border-gray-100 pt-2"></div>
         </div>
 
@@ -87,7 +88,7 @@
         </div>
 
         <!-- BOTTOM CARDS CONTAINER -->
-        <div class="space-y-3">
+        <div class="space-y-3 mb-6">
             
             <!-- BOOKING CARD -->
             <div id="bookingCard" class="interactive hidden bg-white rounded-2xl shadow-xl p-4 border border-gray-100 space-y-4">
@@ -165,10 +166,11 @@
     <script>
         let baseFare = 30;
         let perKmRate = 12;
-        let currentLatLng = [19.0760, 72.8777]; // Default Mumbai Center
+        let currentLatLng = [19.0760, 72.8777]; // Fallback center
         let destinationLatLng = null;
         let routeLayer = null;
         let selectedDestName = "";
+        let searchTimeout = null;
 
         // Initialize Leaflet Map
         const map = L.map('map', { zoomControl: false }).setView(currentLatLng, 13);
@@ -177,62 +179,87 @@
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        let pickupMarker = L.marker(currentLatLng).addTo(map).bindPopup("<b>Pickup Point</b>");
+        let pickupMarker = L.marker(currentLatLng).addTo(map).bindPopup("<b>Pickup Point (GPS)</b>");
 
-        // Real Geolocation
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(position => {
-                currentLatLng = [position.coords.latitude, position.coords.longitude];
-                map.setView(currentLatLng, 15);
-                pickupMarker.setLatLng(currentLatLng);
-                document.getElementById('pickupInput').value = "Current GPS Location";
-            }, () => {
-                document.getElementById('pickupInput').value = "Mumbai Central (Default)";
-            });
+        // Real Live Geolocation
+        function initGPS() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    currentLatLng = [position.coords.latitude, position.coords.longitude];
+                    map.setView(currentLatLng, 15);
+                    pickupMarker.setLatLng(currentLatLng);
+                    document.getElementById('pickupInput').value = "Your Live GPS Location";
+                }, error => {
+                    console.warn("GPS Error:", error);
+                    document.getElementById('pickupInput').value = "Default Location (GPS Disabled)";
+                }, { enableHighAccuracy: true });
+            }
+        }
+        initGPS();
+
+        function recenterGPS() {
+            initGPS();
+            map.setView(currentLatLng, 15);
+            alert("Map centered to your live GPS coordinates.");
         }
 
-        const commonDestinations = [
-            { name: "Dadar Railway Station", lat: 19.0178, lon: 72.8478, dist: "4.5" },
-            { name: "Bandra Kurla Complex (BKC)", lat: 19.0657, lon: 72.8688, dist: "7.2" },
-            { name: "CSMT Railway Station", lat: 18.9401, lon: 72.8353, dist: "11.0" },
-            { name: "Andheri West Metro", lat: 19.1136, lon: 72.8302, dist: "14.5" },
-            { name: "Churchgate Station", lat: 18.9322, lon: 72.8264, dist: "12.8" }
-        ];
+        // Live OpenStreetMap Nominatim Search (Works for anywhere in India/World)
+        function debounceSearch(query) {
+            clearTimeout(searchTimeout);
+            if (!query || query.length < 3) {
+                document.getElementById('suggestionsList').classList.add('hidden');
+                return;
+            }
+            searchTimeout = setTimeout(() => {
+                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=in&limit=5`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const list = document.getElementById('suggestionsList');
+                        if (!data || data.length === 0) {
+                            list.classList.add('hidden');
+                            return;
+                        }
+                        list.innerHTML = data.map(item => {
+                            // Calculate approximate straight-line distance from current GPS
+                            const distVal = calculateDistance(currentLatLng[0], currentLatLng[1], parseFloat(item.lat), parseFloat(item.lon)).toFixed(1);
+                            return `
+                                <div onclick="selectDestination('${item.display_name.replace(/'/g, "")}', ${item.lat}, ${item.lon}, '${distVal}')" class="py-2.5 px-2 hover:bg-gray-50 cursor-pointer flex items-center justify-between">
+                                    <div class="pr-2 truncate">
+                                        <p class="text-xs font-bold text-gray-800 truncate">${item.display_name.split(',')[0]}</p>
+                                        <p class="text-[10px] text-gray-500 truncate">${item.display_name}</p>
+                                    </div>
+                                    <span class="text-xs font-semibold text-gray-600 whitespace-nowrap">${distVal} km</span>
+                                </div>
+                            `;
+                        }).join('');
+                        list.classList.remove('hidden');
+                    })
+                    .catch(err => console.error("Search error:", err));
+            }, 400);
+        }
 
-        function searchDestinations(query) {
-            const list = document.getElementById('suggestionsList');
-            if (!query) {
-                list.classList.add('hidden');
-                return;
-            }
-            const filtered = commonDestinations.filter(d => d.name.toLowerCase().includes(query.toLowerCase()));
-            if (filtered.length === 0) {
-                list.classList.add('hidden');
-                return;
-            }
-            
-            list.innerHTML = filtered.map(item => `
-                <div onclick="selectDestination('${item.name}', ${item.lat}, ${item.lon}, '${item.dist}')" class="py-2.5 px-2 hover:bg-gray-50 cursor-pointer flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-bold text-gray-800">${item.name}</p>
-                        <p class="text-[10px] text-gray-500">Mumbai, Maharashtra</p>
-                    </div>
-                    <span class="text-xs font-semibold text-gray-600">${item.dist} km</span>
-                </div>
-            `).join('');
-            list.classList.remove('hidden');
+        // Haversine formula for distance calculation in KM
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Earth radius in KM
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
         }
 
         let destinationMarker = null;
 
         function selectDestination(name, lat, lon, dist) {
             selectedDestName = name;
-            document.getElementById('destInput').value = name;
+            document.getElementById('destInput').value = name.split(',')[0];
             document.getElementById('suggestionsList').classList.add('hidden');
-            destinationLatLng = [lat, lon];
+            destinationLatLng = [parseFloat(lat), parseFloat(lon)];
 
             let calculatedPrice = Math.round(baseFare + (parseFloat(dist) * perKmRate));
-            let estTime = Math.round(parseFloat(dist) * 3);
+            let estTime = Math.max(3, Math.round(parseFloat(dist) * 2.5)); // ~2.5 mins per km
 
             document.getElementById('tripDist').innerText = dist;
             document.getElementById('tripTime').innerText = estTime;
@@ -301,21 +328,18 @@
             document.getElementById('displayRate').innerText = perKmRate;
             toggleSettings();
             
-            const destVal = document.getElementById('destInput').value;
-            if (destVal && destinationLatLng) {
-                const match = commonDestinations.find(d => d.name === destVal);
-                if (match) selectDestination(match.name, match.lat, match.lon, match.dist);
+            // Re-calculate if destination is already active
+            if (destinationLatLng) {
+                const distVal = calculateDistance(currentLatLng[0], currentLatLng[1], destinationLatLng[0], destinationLatLng[1]).toFixed(1);
+                let calculatedPrice = Math.round(baseFare + (parseFloat(distVal) * perKmRate));
+                document.getElementById('tripPrice').innerText = calculatedPrice;
             }
         }
 
         function resetApp() {
             clearDestination();
             document.getElementById('billModal').classList.add('hidden');
-            map.setView(currentLatLng, 13);
-        }
-
-        function useCurrentLocationAsPickup() {
-            alert("Pickup pinned successfully to your current live GPS.");
+            map.setView(currentLatLng, 14);
         }
     </script>
 </body>

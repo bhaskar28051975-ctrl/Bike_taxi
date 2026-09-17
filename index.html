@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bhaskar Food - Ride Terminal</title>
+    <title>BR Bike Taxi App</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS & JS -->
@@ -29,14 +29,12 @@
                 <button onclick="resetApp()" class="p-1 rounded-full hover:bg-gray-100 text-gray-700">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                 </button>
-                <span class="text-xs font-bold uppercase tracking-wider bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full">Bhaskar Food Terminal</span>
-                <!-- Per-KM Fare Settings Toggle -->
+                <span class="text-xs font-bold uppercase tracking-wider bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full">BR Bike Taxi App</span>
                 <button onclick="toggleSettings()" class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-lg font-medium">⚙️ Rate: ₹<span id="displayRate">12</span>/km</button>
             </div>
 
             <!-- Route Inputs -->
             <div class="relative flex items-start space-x-3">
-                <!-- Visual Connection Line -->
                 <div class="flex flex-col items-center h-20 justify-between py-1">
                     <span class="w-3 h-3 bg-green-500 rounded-full ring-4 ring-green-100"></span>
                     <span class="w-0.5 h-10 bg-gray-300"></span>
@@ -53,12 +51,12 @@
                     <!-- Destination Input -->
                     <div class="bg-white rounded-xl px-3 py-2 border-2 border-yellow-400 flex items-center shadow-sm">
                         <input id="destInput" type="text" placeholder="Where do you want to go? (e.g. Dadar)" oninput="searchDestinations(this.value)" class="bg-transparent text-sm w-full outline-none text-gray-900 font-semibold">
-                        <button onclick="clearDestination()" class="text-gray-400 hover:text-gray-600">✕</button>
+                        <button onclick="clearDestination()" class="text-gray-400 hover:text-gray-600 px-1">✕</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Action buttons (Map / Voice mockup) -->
+            <!-- Action buttons -->
             <div class="flex space-x-2 pt-1">
                 <button onclick="useCurrentLocationAsPickup()" class="flex-1 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 flex items-center justify-center space-x-1 hover:bg-gray-100">
                     <span>📍 Pin on Map</span>
@@ -72,7 +70,7 @@
             <div id="suggestionsList" class="hidden max-h-40 overflow-y-auto divide-y divide-gray-100 border-t border-gray-100 pt-2"></div>
         </div>
 
-        <!-- SETTINGS MODAL (Hidden by default) -->
+        <!-- SETTINGS MODAL -->
         <div id="settingsModal" class="hidden interactive fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
                 <h3 class="font-bold text-lg text-gray-800">Fare Configuration</h3>
@@ -88,16 +86,16 @@
             </div>
         </div>
 
-        <!-- BOTTOM SHEET: BOOKING & NAVIGATION -->
+        <!-- BOTTOM CARDS CONTAINER -->
         <div class="space-y-3">
             
-            <!-- BOOKING CARD (Appears when route is selected) -->
+            <!-- BOOKING CARD -->
             <div id="bookingCard" class="interactive hidden bg-white rounded-2xl shadow-xl p-4 border border-gray-100 space-y-4">
                 <div class="flex items-center justify-between border-b pb-3">
                     <div class="flex items-center space-x-3">
                         <div class="bg-yellow-400 p-2.5 rounded-xl text-xl">🛵</div>
                         <div>
-                            <h4 class="font-bold text-gray-900 text-sm">Bhaskar Bike-Taxi</h4>
+                            <h4 class="font-bold text-gray-900 text-sm">BR Bike Taxi</h4>
                             <p class="text-xs text-gray-500"><span id="tripDist">0</span> km • Est. <span id="tripTime">0</span> mins</p>
                         </div>
                     </div>
@@ -108,13 +106,13 @@
                 </div>
 
                 <div class="flex space-x-2">
-                    <button onclick="startRide()" class="flex-1 bg-black text-yellow-400 py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-gray-900 transition">
-                        Start Booking / Ride
+                    <button onclick="startRide()" class="w-full bg-black text-yellow-400 py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-gray-900 transition flex items-center justify-center space-x-2">
+                        <span>🚀 Start Booking / Ride</span>
                     </button>
                 </div>
             </div>
 
-            <!-- ACTIVE NAVIGATION / END RIDE CARD (Appears during active trip) -->
+            <!-- ACTIVE NAVIGATION / IN-TRANSIT CARD -->
             <div id="activeRideCard" class="interactive hidden bg-black text-white rounded-2xl shadow-2xl p-4 space-y-3">
                 <div class="flex items-center justify-between">
                     <div>
@@ -122,13 +120,18 @@
                         <h4 class="font-bold text-base mt-1">Navigating to Destination</h4>
                     </div>
                     <div class="text-right">
-                        <span class="text-xs text-gray-400">Meter Active</span>
-                        <p class="text-sm font-semibold text-yellow-400">Per KM: ₹<span id="activeRateDisp">12</span></p>
+                        <span class="text-xs text-gray-400">Rate Active</span>
+                        <p class="text-sm font-semibold text-yellow-400">₹<span id="activeRateDisp">12</span>/km</p>
                     </div>
                 </div>
-                <button onclick="endRide()" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold text-sm shadow-md transition">
-                    End Ride & Show Total Bill
-                </button>
+                <div class="flex space-x-2">
+                    <button onclick="openExternalNavigation()" class="flex-1 bg-yellow-400 hover:bg-yellow-500 text-black py-2.5 rounded-xl font-bold text-xs flex items-center justify-center space-x-1 shadow-md">
+                        <span>🗺️ Open Google Maps</span>
+                    </button>
+                    <button onclick="endRide()" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl font-bold text-xs shadow-md">
+                        🏁 End Ride
+                    </button>
+                </div>
             </div>
 
         </div>
@@ -139,7 +142,7 @@
         <div class="bg-white rounded-3xl w-full max-w-sm p-6 space-y-4 shadow-2xl text-center">
             <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto text-3xl font-bold">✓</div>
             <h3 class="text-xl font-black text-gray-900">Trip Completed!</h3>
-            <p class="text-xs text-gray-500">Thank you for riding with Bhaskar Food Terminal.</p>
+            <p class="text-xs text-gray-500">Thank you for riding with BR Bike Taxi App.</p>
             
             <div class="bg-gray-50 rounded-2xl p-4 text-left space-y-2 border border-gray-100 text-sm">
                 <div class="flex justify-between"><span>Total Distance:</span> <span id="billDist" class="font-bold">0 km</span></div>
@@ -149,7 +152,7 @@
 
             <div class="flex space-x-2 pt-2">
                 <button onclick="shareWhatsApp()" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center space-x-1">
-                    <span>💬 Share via WhatsApp</span>
+                    <span>💬 Share WhatsApp Bill</span>
                 </button>
                 <button onclick="resetApp()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 rounded-xl font-bold text-xs">
                     New Ride
@@ -160,12 +163,12 @@
 
     <!-- SCRIPT LOGIC -->
     <script>
-        // Configuration & State
         let baseFare = 30;
         let perKmRate = 12;
         let currentLatLng = [19.0760, 72.8777]; // Default Mumbai Center
         let destinationLatLng = null;
         let routeLayer = null;
+        let selectedDestName = "";
 
         // Initialize Leaflet Map
         const map = L.map('map', { zoomControl: false }).setView(currentLatLng, 13);
@@ -174,21 +177,20 @@
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        let pickupMarker = L.marker(currentLatLng).addTo(map).bindPopup("<b>Pickup Location</b>");
+        let pickupMarker = L.marker(currentLatLng).addTo(map).bindPopup("<b>Pickup Point</b>");
 
-        // Try getting real user geolocation
+        // Real Geolocation
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(position => {
                 currentLatLng = [position.coords.latitude, position.coords.longitude];
                 map.setView(currentLatLng, 15);
                 pickupMarker.setLatLng(currentLatLng);
-                document.getElementById('pickupInput').value = "Current GPS Location (Mumbai)";
+                document.getElementById('pickupInput').value = "Current GPS Location";
             }, () => {
                 document.getElementById('pickupInput').value = "Mumbai Central (Default)";
             });
         }
 
-        // Mock destination search suggestions (Rapido style)
         const commonDestinations = [
             { name: "Dadar Railway Station", lat: 19.0178, lon: 72.8478, dist: "4.5" },
             { name: "Bandra Kurla Complex (BKC)", lat: 19.0657, lon: 72.8688, dist: "7.2" },
@@ -210,7 +212,7 @@
             }
             
             list.innerHTML = filtered.map(item => `
-                <div onclick="selectDestination('${item.name}', ${item.lat}, ${item.lon}, ${item.dist})" class="py-2.5 px-2 hover:bg-gray-50 cursor-pointer flex items-center justify-between">
+                <div onclick="selectDestination('${item.name}', ${item.lat}, ${item.lon}, '${item.dist}')" class="py-2.5 px-2 hover:bg-gray-50 cursor-pointer flex items-center justify-between">
                     <div>
                         <p class="text-xs font-bold text-gray-800">${item.name}</p>
                         <p class="text-[10px] text-gray-500">Mumbai, Maharashtra</p>
@@ -221,27 +223,28 @@
             list.classList.remove('hidden');
         }
 
+        let destinationMarker = null;
+
         function selectDestination(name, lat, lon, dist) {
+            selectedDestName = name;
             document.getElementById('destInput').value = name;
             document.getElementById('suggestionsList').classList.add('hidden');
             destinationLatLng = [lat, lon];
 
-            // Calculate Price based on per KM settings
             let calculatedPrice = Math.round(baseFare + (parseFloat(dist) * perKmRate));
-            let estTime = Math.round(parseFloat(dist) * 3); // ~3 mins per km
+            let estTime = Math.round(parseFloat(dist) * 3);
 
             document.getElementById('tripDist').innerText = dist;
             document.getElementById('tripTime').innerText = estTime;
             document.getElementById('tripPrice').innerText = calculatedPrice;
 
-            // Draw Marker & Route on Map
-            L.marker(destinationLatLng).addTo(map).bindPopup(`<b>Destination:</b> ${name}`).openPopup();
+            if (destinationMarker) map.removeLayer(destinationMarker);
+            destinationMarker = L.marker(destinationLatLng).addTo(map).bindPopup(`<b>Destination:</b> ${name}`).openPopup();
             
             if (routeLayer) map.removeLayer(routeLayer);
             routeLayer = L.polyline([currentLatLng, destinationLatLng], { color: '#000', weight: 4, dashArray: '5, 5' }).addTo(map);
             map.fitBounds(routeLayer.getBounds(), { padding: [50, 50] });
 
-            // Show Booking Card
             document.getElementById('bookingCard').classList.remove('hidden');
         }
 
@@ -249,7 +252,9 @@
             document.getElementById('destInput').value = '';
             document.getElementById('suggestionsList').classList.add('hidden');
             document.getElementById('bookingCard').classList.add('hidden');
+            document.getElementById('activeRideCard').classList.add('hidden');
             if (routeLayer) map.removeLayer(routeLayer);
+            if (destinationMarker) map.removeLayer(destinationMarker);
         }
 
         function startRide() {
@@ -258,10 +263,18 @@
             document.getElementById('activeRateDisp').innerText = perKmRate;
         }
 
+        function openExternalNavigation() {
+            if (!destinationLatLng) {
+                alert("Please select a destination first.");
+                return;
+            }
+            const url = `https://www.google.com/maps/dir/?api=1&destination=${destinationLatLng[0]},${destinationLatLng[1]}&travelmode=driving`;
+            window.open(url, '_blank');
+        }
+
         function endRide() {
             document.getElementById('activeRideCard').classList.add('hidden');
             
-            // Populate Bill Modal
             const dist = document.getElementById('tripDist').innerText;
             const price = document.getElementById('tripPrice').innerText;
             document.getElementById('billDist').innerText = dist + " km";
@@ -274,7 +287,7 @@
         function shareWhatsApp() {
             const dist = document.getElementById('tripDist').innerText;
             const total = document.getElementById('billTotal').innerText;
-            const text = encodeURIComponent(`*Bhaskar Food Ride Receipt* 🛵\nDistance: ${dist} km\nTotal Fare: ${total}\nThank you for riding with us!`);
+            const text = encodeURIComponent(`*BR Bike Taxi Receipt* 🛵\nDestination: ${selectedDestName}\nDistance: ${dist} km\nTotal Fare: ${total}\nThank you for riding with us!`);
             window.open(`https://wa.me/?text=${text}`, '_blank');
         }
 
@@ -288,7 +301,6 @@
             document.getElementById('displayRate').innerText = perKmRate;
             toggleSettings();
             
-            // Re-trigger calculation if destination is already picked
             const destVal = document.getElementById('destInput').value;
             if (destVal && destinationLatLng) {
                 const match = commonDestinations.find(d => d.name === destVal);
@@ -299,12 +311,11 @@
         function resetApp() {
             clearDestination();
             document.getElementById('billModal').classList.add('hidden');
-            document.getElementById('activeRideCard').classList.add('hidden');
             map.setView(currentLatLng, 13);
         }
 
         function useCurrentLocationAsPickup() {
-            alert("Pickup pinned successfully to your live GPS coordinates.");
+            alert("Pickup pinned successfully to your current live GPS.");
         }
     </script>
 </body>

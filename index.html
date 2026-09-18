@@ -394,7 +394,6 @@
                     pickupMarker.setLatLng(currentLatLng);
 
                     if (lastLat !== null && lastLon !== null) {
-                        // Calculate actual distance moved between last GPS point and new GPS point
                         let segmentDist = calculateHaversine(lastLat, lastLon, newLat, newLon);
                         // Filter out tiny GPS jitters (< 3 meters)
                         if (segmentDist > 0.003) { 

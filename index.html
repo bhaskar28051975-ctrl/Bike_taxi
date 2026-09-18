@@ -57,7 +57,7 @@
 
                     <!-- Destination Input -->
                     <div class="bg-white rounded-xl px-3 py-2 border-2 border-yellow-400 flex items-center shadow-sm">
-                        <input id="destInput" type="text" placeholder="Where to go? (Type destination...)" oninput="debounceSearch(this.value)" class="bg-transparent text-sm w-full outline-none text-gray-900 font-semibold">
+                        <input id="destInput" type="text" placeholder="Where to go? (Tap suggestion below)" oninput="debounceSearch(this.value)" onkeypress="handleDestKeypress(event)" class="bg-transparent text-sm w-full outline-none text-gray-900 font-semibold">
                         <button onclick="clearDestination()" class="text-gray-400 hover:text-gray-600 px-1">✕</button>
                     </div>
                 </div>
@@ -205,6 +205,7 @@
         let routeLayer = null;
         let selectedDestName = "Custom Location";
         let searchTimeout = null;
+        let lastSearchResults = [];
 
         // Live Meter State
         let watchId = null;
@@ -271,6 +272,7 @@
                 fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=in&limit=5`)
                     .then(response => response.json())
                     .then(data => {
+                        lastSearchResults = data || [];
                         const list = document.getElementById('suggestionsList');
                         if (!data || data.length === 0) {
                             list.classList.add('hidden');
@@ -292,6 +294,18 @@
                     })
                     .catch(err => console.error("Search error:", err));
             }, 400);
+        }
+
+        // Automatically pick the first result if user presses Enter or leaves input
+        function handleDestKeypress(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                if (lastSearchResults.length > 0) {
+                    const first = lastSearchResults[0];
+                    const distVal = calculateHaversine(currentLatLng[0], currentLatLng[1], parseFloat(first.lat), parseFloat(first.lon)).toFixed(1);
+                    selectDestination(first.display_name, first.lat, first.lon, distVal);
+                }
+            }
         }
 
         function calculateHaversine(lat1, lon1, lat2, lon2) {
@@ -382,7 +396,6 @@
             }, 1000);
         }
 
-        // True GPS Movement Tracker using watchPosition
         function startGPSDistanceTracking() {
             if (navigator.geolocation) {
                 watchId = navigator.geolocation.watchPosition(position => {
@@ -395,7 +408,6 @@
 
                     if (lastLat !== null && lastLon !== null) {
                         let segmentDist = calculateHaversine(lastLat, lastLon, newLat, newLon);
-                        // Filter out tiny GPS jitters (< 3 meters)
                         if (segmentDist > 0.003) { 
                             tripDistanceKm += segmentDist;
                             lastLat = newLat;

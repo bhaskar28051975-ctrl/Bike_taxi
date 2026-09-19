@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BR Bike Taxi - Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+</head>
+<body class="bg-red-950 text-white min-h-screen p-4 sm:p-8">
+
+    <!-- ADMIN LOGIN MODAL -->
+    <div id="adminLoginModal" class="fixed inset-0 bg-red-950 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-8 space-y-6 shadow-2xl border-4 border-red-600 text-slate-900">
+            <div class="text-center">
+                <span class="text-4xl">🔐</span>
+                <h2 class="text-2xl font-black text-red-600 uppercase mt-2">Admin Portal</h2>
+                <p class="text-sm font-semibold text-slate-600">Enter Admin Master Password</p>
+            </div>
+            <div class="space-y-4">
+                <input id="adminPassInput" type="password" placeholder="Master Password" class="w-full p-4 bg-red-50 border-2 border-red-200 rounded-2xl text-slate-900 text-base font-bold outline-none focus:border-red-600">
+                <button onclick="adminLogin()" class="w-full py-4 bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl text-base shadow-lg uppercase">Login</button>
+                <p id="adminError" class="text-sm text-red-600 font-extrabold text-center hidden">Incorrect Password</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN ADMIN DASHBOARD -->
+    <div id="adminDashboard" class="hidden max-w-4xl mx-auto space-y-8">
+        <header class="bg-white text-slate-900 rounded-3xl p-6 border-4 border-red-600 shadow-2xl flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-black text-red-600">BR Taxi Admin Hub</h1>
+                <p class="text-xs font-black uppercase tracking-wider text-slate-500 mt-0.5">Control & Subscription Management</p>
+            </div>
+            <button onclick="location.reload()" class="bg-red-100 hover:bg-red-200 text-red-700 text-sm font-black px-4 py-2.5 rounded-xl border border-red-300">Logout 🚪</button>
+        </header>
+
+        <!-- Add New Rider Form -->
+        <div class="bg-white text-slate-900 rounded-3xl p-6 sm:p-8 border-4 border-red-600 shadow-2xl space-y-4">
+            <h2 class="text-xl font-black text-red-600 uppercase border-b-2 border-red-100 pb-3">➕ Register New Rider / Renew Subscription</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm font-bold">
+                <div>
+                    <label class="block mb-1 text-slate-700">Rider Mobile / ID</label>
+                    <input id="newRiderId" type="text" placeholder="e.g. 9876543210" class="w-full p-3.5 bg-red-50 border-2 border-red-200 rounded-xl text-slate-900">
+                </div>
+                <div>
+                    <label class="block mb-1 text-slate-700">Rider Password</label>
+                    <input id="newRiderPass" type="text" placeholder="e.g. rider123" class="w-full p-3.5 bg-red-50 border-2 border-red-200 rounded-xl text-slate-900">
+                </div>
+            </div>
+            <button onclick="registerRider()" class="w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-xl uppercase text-sm shadow-lg tracking-wider">Save & Activate Rider</button>
+        </div>
+
+        <!-- Registered Riders List -->
+        <div class="bg-white text-slate-900 rounded-3xl p-6 sm:p-8 border-4 border-red-600 shadow-2xl space-y-4">
+            <h2 class="text-xl font-black text-red-600 uppercase border-b-2 border-red-100 pb-3">📋 All Registered Riders</h2>
+            <div id="ridersListContainer" class="space-y-3">
+                <p class="text-sm font-bold text-slate-500">Loading riders...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADMIN SCRIPT -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCJJbkw7Co1eKo2yGY4QjzajcsKq51gFH4",
+            authDomain: "br-bike-taxi.firebaseapp.com",
+            databaseURL: "https://br-bike-taxi-default-rtdb.firebaseio.com",
+            projectId: "br-bike-taxi",
+            storageBucket: "br-bike-taxi.firebasestorage.app",
+            messagingSenderId: "666545860828",
+            appId: "1:666545860828:web:35afd46492505483438419",
+            measurementId: "G-857ZR81SCB"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Master admin password
+        const MASTER_ADMIN_PASS = "bradmin123";
+
+        function adminLogin() {
+            const pass = document.getElementById('adminPassInput').value.trim();
+            if (pass === MASTER_ADMIN_PASS) {
+                document.getElementById('adminLoginModal').classList.add('hidden');
+                document.getElementById('adminDashboard').classList.remove('hidden');
+                loadRiders();
+            } else {
+                document.getElementById('adminError').classList.remove('hidden');
+            }
+        }
+
+        function registerRider() {
+            const id = document.getElementById('newRiderId').value.trim();
+            const pass = document.getElementById('newRiderPass').value.trim();
+
+            if (!id || !pass) {
+                alert("Please fill in both Rider ID and Password.");
+                return;
+            }
+
+            db.ref(`riders/${id}`).set({
+                password: pass,
+                status: 'active',
+                createdAt: Date.now()
+            }).then(() => {
+                alert(`Rider ${id} registered and activated successfully!`);
+                document.getElementById('newRiderId').value = '';
+                document.getElementById('newRiderPass').value = '';
+            });
+        }
+
+        function toggleStatus(riderId, currentStatus) {
+            const newStatus = currentStatus === 'active' ? 'blocked' : 'active';
+            db.ref(`riders/${riderId}/status`).set(newStatus);
+        }
+
+        function deleteRider(riderId) {
+            if (confirm(`Are you sure you want to delete rider ${riderId}?`)) {
+                db.ref(`riders/${riderId}`).remove();
+            }
+        }
+
+        function loadRiders() {
+            db.ref('riders').on('value', snapshot => {
+                const riders = snapshot.val();
+                const container = document.getElementById('ridersListContainer');
+                container.innerHTML = '';
+
+                if (!riders) {
+                    container.innerHTML = '<p class="text-sm font-bold text-slate-500">No riders registered yet.</p>';
+                    return;
+                }
+
+                Object.keys(riders).forEach(id => {
+                    const rider = riders[id];
+                    const isActive = rider.status === 'active';
+                    
+                    const card = document.createElement('div');
+                    card.className = "bg-red-50 border-2 border-red-200 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3";
+                    card.innerHTML = `
+                        <div>
+                            <p class="text-base font-black text-slate-900">📱 Rider ID: ${id}</p>
+                            <p class="text-xs font-bold text-slate-600 mt-0.5">Password: <span class="text-red-600">${rider.password}</span> | Status: <span class="${isActive ? 'text-green-700 font-black' : 'text-red-700 font-black'} uppercase">${rider.status}</span></p>
+                        </div>
+                        <div class="flex gap-2 w-full sm:w-auto">
+                            <button onclick="toggleStatus('${id}', '${rider.status}')" class="flex-1 sm:flex-none ${isActive ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-600 hover:bg-green-700'} text-white px-4 py-2 rounded-xl font-black text-xs uppercase shadow">
+                                ${isActive ? 'Block / Deactivate' : 'Activate'}
+                            </button>
+                            <button onclick="deleteRider('${id}')" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl font-black text-xs uppercase shadow">
+                                Delete
+                            </button>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
